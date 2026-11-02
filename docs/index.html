@@ -171,6 +171,7 @@ function showPreview(title, body, files, ids){
   $('#main').innerHTML = `
     <div class="bar">
       <button class="b" id="copyPost">📋 전체 복사 (글+사진)</button>
+      <button class="g" id="copyText">글만 복사 (사진 자리 표시)</button>
       <button class="g" id="copyTitle">제목 복사</button>
       <button class="g" id="dlImgs">사진 한 번에 받기 (${files.length}장)</button>
       <button class="g" id="back">← 목록으로</button>
@@ -184,6 +185,7 @@ function showPreview(title, body, files, ids){
   $('#back').onclick = renderList;
   $('#copyTitle').onclick = () => navigator.clipboard.writeText($('#ptitle').value).then(() => flash('제목 복사됨'));
   $('#copyPost').onclick = copyPost;
+  $('#copyText').onclick = copyTextOnly;
   $('#dlImgs').onclick = () => downloadZip(files, $('#ptitle').value);
 }
 
@@ -198,6 +200,20 @@ async function copyPost(){
     const s = getSelection(); s.removeAllRanges(); s.addRange(r); document.execCommand('copy'); s.removeAllRanges();
   }
   flash('복사됐어요! 카페 본문에 Ctrl+V');
+}
+
+async function copyTextOnly(){
+  // 사진 대신 [사진 01] 표시를 넣은 글만 복사 → 사진은 '사진 한 번에 받기'로 받은 순서대로 넣기
+  const el = $('#post').cloneNode(true);
+  let n = 0;
+  el.querySelectorAll('img, video').forEach(m => { n++; m.replaceWith(document.createTextNode('[사진 ' + String(n).padStart(2, '0') + ']')); });
+  const html = el.innerHTML;
+  try{
+    await navigator.clipboard.write([new ClipboardItem({
+      'text/html': new Blob([html], {type: 'text/html'}),
+      'text/plain': new Blob([el.innerText], {type: 'text/plain'})})]);
+  }catch(e){ await navigator.clipboard.writeText(el.innerText); }
+  flash('글만 복사됐어요 (사진 ' + n + '장 자리 표시)');
 }
 
 async function downloadZip(files, title){

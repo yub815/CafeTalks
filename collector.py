@@ -87,6 +87,8 @@ def get(url: str, **kw) -> requests.Response | None:
     for attempt in range(2):
         try:
             r = session.get(url, timeout=15, **kw)
+            if "charset" not in r.headers.get("Content-Type", "").lower():
+                r.encoding = "utf-8"  # 인코딩 표기가 없으면 깨지지 않게 UTF-8로
             if r.status_code == 200:
                 return r
             log(f"  ! {r.status_code} {url}")
@@ -318,7 +320,8 @@ def og_image(url: str) -> str | None:
 LOGO_HINTS = ("logo", "default", "og_image", "ogimage", "og-image", "noimage", "no_image", "sns_", "share",
               "symbol", "ci.", "/ci/", "favicon", "banner")
 NEWS_EXCLUDE_DEFAULT = ["칼럼", "사설", "기고", "오피니언", "기자수첩", "인터뷰", "취재", "분석", "전망", "질문",
-                        "주가", "증권", "실적", "매출", "영업이익", "투자", "논란", "소송", "부고"]
+                        "주가", "증권", "실적", "매출", "영업이익", "투자", "논란", "소송", "부고",
+                        "업계", "트렌드", "동향", "外", "경쟁"]
 ACTION_WORDS = ["출시", "선보", "공개", "개봉", "방영", "발매", "론칭", "런칭", "사전예약", "오픈", "판매", "신메뉴",
                 "돌파", "확정", "업데이트", "PV", "티저", "예고"]
 
@@ -327,9 +330,20 @@ def is_logo(url: str | None) -> bool:
     return not url or any(h in url.lower() for h in LOGO_HINTS)
 
 
+GENERIC = {"출시", "신제품", "신메뉴", "공개", "시즌", "한정", "애니메이션", "애니", "돌파", "게임", "스팀",
+           "겨울", "선보여", "선봬", "브랜드", "누적", "관객", "인기", "화제", "흥행", "메뉴", "제품", "종", "2종",
+           "3종", "4종", "5종", "기념", "판매", "업계", "이벤트"}
+PARTICLE = re.compile(r"(이|가|은|는|을|를|의|에|도|와|과|로|으로|에서|까지|부터)$")
+
+
 def tokens(t: str) -> set[str]:
     t = re.sub(r"\[[^\]]*\]|【[^】]*】", " ", t)
-    return {w for w in re.findall(r"[가-힣A-Za-z0-9]{2,}", t)} - {"출시", "신제품", "신메뉴", "공개", "시즌", "한정"}
+    out = set()
+    for w in re.findall(r"[가-힣A-Za-z0-9]{2,}", t):
+        w = PARTICLE.sub("", w) if len(w) > 2 else w
+        if len(w) >= 2 and w not in GENERIC:
+            out.add(w.lower())
+    return out
 
 
 def quoted(t: str) -> set[str]:
@@ -357,7 +371,10 @@ def same_story(a: dict, b: dict) -> bool:
     ta, tb = tokens(a["title"]), tokens(b["title"])
     if not ta or not tb:
         return False
-    return len(ta & tb) / min(len(ta), len(tb)) >= 0.5
+    common = ta & tb
+    if len([w for w in common if len(w) >= 3]) >= 2:
+        return True  # '극장판'+'치이카와', 'cgv'+'트러플' 처럼 고유한 단어 2개 이상 겹치면 같은 소식
+    return len(common) / min(len(ta), len(tb)) >= 0.5
 
 
 def collect_news(cat: str, conf: dict, limit: int, since: datetime) -> list[dict]:
