@@ -1,0 +1,225 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<title>주간 게시글 도우미</title>
+<style>
+:root{--bg:#141414;--panel:#1e1e1e;--line:#333;--text:#e8e8e8;--muted:#9a9a9a;--accent:#03c75a;--warn:#ffb020}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font:15px/1.6 'Malgun Gothic','Apple SD Gothic Neo',system-ui,sans-serif}
+a{color:#7cc4ff}
+header{position:sticky;top:0;z-index:5;background:#0d0d0d;border-bottom:1px solid var(--line);padding:10px 16px;display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+header b{margin-right:8px}
+.tab{padding:6px 14px;border-radius:999px;background:var(--panel);color:var(--text);border:1px solid var(--line);cursor:pointer;font:inherit}
+.tab.on{background:var(--accent);color:#000;border-color:var(--accent);font-weight:700}
+.upd{margin-left:auto;color:var(--muted);font-size:12px}
+main{max-width:1100px;margin:0 auto;padding:16px}
+.bar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:6px 0 16px}
+button.b{background:var(--accent);color:#000;border:0;border-radius:8px;padding:9px 16px;font-weight:700;cursor:pointer;font-size:14px}
+button.g{background:transparent;color:var(--text);border:1px solid var(--line);border-radius:8px;padding:8px 14px;cursor:pointer;font-size:14px}
+.meta{color:var(--muted);font-size:13px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px;margin-bottom:12px;display:grid;grid-template-columns:28px 180px 1fr;gap:12px}
+.card.sel{border-color:var(--accent)}
+.pic img,.pic video{width:180px;height:130px;object-fit:cover;border-radius:8px;background:#000;display:block}
+.title{font-weight:700;margin:2px 0 6px}
+input[type=text],textarea{width:100%;background:#111;color:var(--text);border:1px solid var(--line);border-radius:6px;padding:6px 8px;font:inherit}
+textarea{min-height:76px}
+.thumbs{display:flex;gap:4px;flex-wrap:wrap;margin-top:6px}
+.thumbs label{position:relative}
+.thumbs img{width:56px;height:56px;object-fit:cover;border-radius:6px}
+.thumbs input{position:absolute;left:2px;top:2px}
+.empty{color:var(--muted);padding:40px;text-align:center}
+.note{background:#2a2410;border:1px solid #5a4a14;color:#ffd77a;border-radius:8px;padding:10px 14px;margin:10px 0;font-size:14px}
+.preview{background:#000;border:1px solid var(--line);border-radius:12px;padding:24px;max-width:860px}
+.preview img{max-width:100%}
+.linkbtn{background:none;border:0;color:var(--muted);cursor:pointer;font-size:13px;padding:0;text-decoration:underline}
+@media (max-width:700px){.card{grid-template-columns:24px 1fr}.pic{grid-column:2}.pic img{width:100%;height:auto}}
+</style>
+</head>
+<body>
+<header><b>주간 게시글 도우미</b><span id="tabs"></span><span class="upd" id="upd"></span></header>
+<main id="main"><div class="empty">불러오는 중...</div></main>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script>
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+let DATA = null, CAT = null, SHOW_USED = false;
+
+// 쓴 것/숨긴 것은 이 브라우저에 기억
+function load(k){ try{ return new Set(JSON.parse(localStorage.getItem(k) || '[]')); }catch(e){ return new Set(); } }
+function save(k, set){ try{ localStorage.setItem(k, JSON.stringify([...set])); }catch(e){} }
+const USED = load('wc_used'), HIDDEN = load('wc_hidden');
+
+function abs(p){ return new URL(p, location.href).href; }
+function weekLabel(d){
+  const mon = new Date(d); mon.setDate(d.getDate() - ((d.getDay() + 6) % 7));
+  const thu = new Date(mon); thu.setDate(mon.getDate() + 3);
+  return [thu.getMonth() + 1, Math.floor((thu.getDate() - 1) / 7) + 1];
+}
+const fmt = n => (n || 0).toLocaleString('ko-KR');
+
+async function init(){
+  try{
+    const r = await fetch('data/items.json?t=' + Date.now());
+    DATA = await r.json();
+  }catch(e){
+    $('#main').innerHTML = '<div class="empty">아직 수집된 자료가 없어요. 첫 자동 수집이 끝나면 여기에 나와요.</div>';
+    return;
+  }
+  $('#upd').textContent = '마지막 수집: ' + DATA.updated.replace('T', ' ');
+  const cats = [...Object.keys(DATA.categories), '유머'];
+  CAT = sessionStorage.getItem('wc_cat') || cats[0];
+  $('#tabs').innerHTML = cats.map(c => `<button class="tab" data-c="${esc(c)}">${esc(c)}</button>`).join(' ');
+  $('#tabs').onclick = e => { const c = e.target.dataset.c; if(c){ CAT = c; try{sessionStorage.setItem('wc_cat', c)}catch(_){}; renderList(); } };
+  renderList();
+}
+
+function rows(){
+  return DATA.items.filter(it => it.category === CAT && !HIDDEN.has(it.id) && (SHOW_USED || !USED.has(it.id)));
+}
+
+function media(src, cls=''){
+  return src.endsWith('.mp4') ? `<video src="${esc(src)}" muted class="${cls}"></video>` : `<img loading="lazy" src="${esc(src)}" class="${cls}">`;
+}
+
+function renderList(){
+  document.querySelectorAll('.tab').forEach(t => t.classList.toggle('on', t.dataset.c === CAT));
+  const list = rows(), roundup = CAT !== '유머';
+  let h = `<div class="bar"><span class="meta">${list.length}개 · 점수 높은 순${SHOW_USED ? '' : ' (이미 쓴 것 숨김)'}</span>
+    <button class="g" id="toggleUsed">${SHOW_USED ? '쓴 것 숨기기' : '쓴 것도 보기'}</button>`;
+  if(roundup) h += `<button class="b" id="buildTop">체크한 것으로 글 만들기</button>`;
+  h += `</div>`;
+  if(!list.length) h += `<div class="empty">이번 주 후보가 없어요.</div>`;
+  for(const it of list){
+    const used = USED.has(it.id);
+    h += `<div class="card" id="c${it.id}">
+      <div>${roundup ? `<input type="checkbox" class="pick" value="${it.id}">` : ''}</div>
+      <div class="pic">${media(it.images[0])}${it.images.length > 1 ? `<div class="meta">+${it.images.length - 1}장</div>` : ''}</div>
+      <div>
+        <div class="meta">${esc(it.source)} · ${esc(it.posted_at.slice(0,16).replace('T',' '))}
+          ${it.views ? ' · 조회 ' + fmt(it.views) : ''}${it.likes ? ' · 추천 ' + fmt(it.likes) : ''}${it.comments ? ' · 댓글 ' + fmt(it.comments) : ''}
+          · <a href="${esc(it.url)}" target="_blank" rel="noopener">원본</a>
+          ${used ? ' · <b style="color:var(--warn)">사용함</b>' : ''}
+          · <button class="linkbtn" data-hide="${it.id}">숨기기</button></div>
+        <div class="title">${esc(it.title)}</div>`;
+    if(roundup){
+      h += `<input type="text" id="h${it.id}" value="${esc(it.heading)}" placeholder="제목줄">
+        <textarea id="t${it.id}" placeholder="코멘트">${esc(it.comment)}</textarea>`;
+      if(it.images.length > 1){
+        h += `<div class="meta">넣을 사진:</div><div class="thumbs">` + it.images.map((u, i) =>
+          `<label><input type="checkbox" class="img${it.id}" value="${i}" ${i === 0 ? 'checked' : ''}>${media(u)}</label>`).join('') + `</div>`;
+      }
+    }else{
+      h += `<div style="display:flex;gap:8px;flex-wrap:wrap"><input type="text" id="h${it.id}" value="${esc(it.title)}" style="flex:1;min-width:200px">
+        <button class="b" data-humor="${it.id}">이 짤로 글 만들기</button></div>`;
+      if(it.images.length > 1) h += `<div class="thumbs">` + it.images.slice(1, 6).map(u => media(u)).join('') + `</div>`;
+    }
+    h += `</div></div>`;
+  }
+  if(roundup && list.length) h += `<div class="bar"><button class="b" id="buildBottom">체크한 것으로 글 만들기</button></div>`;
+  $('#main').innerHTML = h;
+  window.scrollTo(0, 0);
+  $('#toggleUsed').onclick = () => { SHOW_USED = !SHOW_USED; renderList(); };
+  document.querySelectorAll('.pick').forEach(c => c.onchange = () => c.closest('.card').classList.toggle('sel', c.checked));
+  document.querySelectorAll('[data-hide]').forEach(b => b.onclick = () => { HIDDEN.add(b.dataset.hide); save('wc_hidden', HIDDEN); $('#c' + b.dataset.hide).remove(); });
+  document.querySelectorAll('[data-humor]').forEach(b => b.onclick = () => buildHumor(b.dataset.humor));
+  ['#buildTop', '#buildBottom'].forEach(s => { const b = $(s); if(b) b.onclick = buildRoundup; });
+}
+
+const byId = id => DATA.items.find(x => x.id === id);
+const linesHtml = t => (t || '').split('\n').map(l => `<p>${l.trim() ? esc(l) : '&nbsp;'}</p>`).join('');
+function imgTag(src){
+  if(src.endsWith('.mp4')) return `<p style="text-align:center;color:#999">[영상 첨부: 사진 받기 파일에 포함]</p>`;
+  return `<p style="text-align:center"><img src="${esc(abs(src))}" style="max-width:100%;width:640px"></p>`;
+}
+
+function buildRoundup(){
+  const ids = [...document.querySelectorAll('.pick:checked')].map(c => c.value);
+  if(!ids.length){ alertMsg('넣을 항목을 체크해 주세요.'); return; }
+  const conf = DATA.categories[CAT];
+  const [m, w] = weekLabel(new Date());
+  const title = conf.title.replace('{month}', m).replace('{week}', w);
+  const parts = [linesHtml(conf.intro), '<p>&nbsp;</p>'];
+  const files = [];
+  ids.forEach((id, k) => {
+    const it = byId(id);
+    const chosen = [...document.querySelectorAll('.img' + id + ':checked')].map(c => it.images[+c.value]);
+    const imgs = chosen.length ? chosen : it.images.slice(0, 1);
+    const heading = $('#h' + id).value, comment = $('#t' + id).value;
+    if(conf.style === 'numbered'){
+      parts.push(`<p><b>${k + 1}. ${esc(heading)}</b></p><p><a href="${esc(it.url)}">${esc(it.url)}</a></p>`);
+    }else{
+      parts.push(`<p style="text-align:center"><b><i><span style="font-size:13px">${esc(heading)}</span></i></b></p>`);
+    }
+    imgs.forEach(s => { parts.push(imgTag(s)); files.push(s); });
+    parts.push(linesHtml(comment), '<p>&nbsp;</p><p>&nbsp;</p>');
+  });
+  showPreview(title, parts.join(''), files, ids);
+}
+
+function buildHumor(id){
+  const it = byId(id);
+  const title = $('#h' + id).value || it.title;
+  const body = it.images.map(imgTag).join('') + `<p>&nbsp;</p><p style="color:#888;font-size:12px">출처: ${esc(it.source)}</p>`;
+  showPreview(title, body, it.images, [id]);
+}
+
+function showPreview(title, body, files, ids){
+  ids.forEach(i => USED.add(i)); save('wc_used', USED);
+  $('#main').innerHTML = `
+    <div class="bar">
+      <button class="b" id="copyPost">📋 전체 복사 (글+사진)</button>
+      <button class="g" id="copyTitle">제목 복사</button>
+      <button class="g" id="dlImgs">사진 한 번에 받기 (${files.length}장)</button>
+      <button class="g" id="back">← 목록으로</button>
+      <span id="msg" class="meta"></span>
+    </div>
+    <div class="note">카페 글쓰기에서 제목칸에 제목을 붙여 넣고, 본문을 클릭한 뒤 Ctrl+V 하세요.
+      사진이 안 붙으면 <b>사진 한 번에 받기</b>로 받은 01, 02... 사진을 순서대로 올리면 돼요. 아래 미리보기에서 바로 고쳐도 돼요.</div>
+    <p><b>제목</b> <input id="ptitle" type="text" value="${esc(title)}"></p>
+    <div class="preview" id="post" contenteditable="true">${body}</div>`;
+  window.scrollTo(0, 0);
+  $('#back').onclick = renderList;
+  $('#copyTitle').onclick = () => navigator.clipboard.writeText($('#ptitle').value).then(() => flash('제목 복사됨'));
+  $('#copyPost').onclick = copyPost;
+  $('#dlImgs').onclick = () => downloadZip(files, $('#ptitle').value);
+}
+
+async function copyPost(){
+  const el = $('#post');
+  try{
+    await navigator.clipboard.write([new ClipboardItem({
+      'text/html': new Blob([el.innerHTML], {type: 'text/html'}),
+      'text/plain': new Blob([el.innerText], {type: 'text/plain'})})]);
+  }catch(e){
+    const r = document.createRange(); r.selectNodeContents(el);
+    const s = getSelection(); s.removeAllRanges(); s.addRange(r); document.execCommand('copy'); s.removeAllRanges();
+  }
+  flash('복사됐어요! 카페 본문에 Ctrl+V');
+}
+
+async function downloadZip(files, title){
+  flash('사진 모으는 중...');
+  const zip = new JSZip();
+  let n = 0;
+  for(const f of files){
+    const r = await fetch(f); if(!r.ok) continue;
+    n++; zip.file(String(n).padStart(2, '0') + f.slice(f.lastIndexOf('.')), await r.blob());
+  }
+  const blob = await zip.generateAsync({type: 'blob'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = (title || '사진').replace(/[\\/:*?"<>|]/g, '').slice(0, 40) + '.zip';
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+  flash(n + '장 받기 완료');
+}
+
+function flash(t){ const m = $('#msg'); if(m){ m.textContent = t; clearTimeout(flash.t); flash.t = setTimeout(() => m.textContent = '', 3000); } }
+function alertMsg(t){ const b = document.querySelector('.bar .meta'); if(b){ b.textContent = t; b.style.color = 'var(--warn)'; } }
+init();
+</script>
+</body>
+</html>
