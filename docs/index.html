@@ -178,8 +178,14 @@ function buildHumor(id){
   showPreview(title, body, it.images, [id]);
 }
 
+let LIST_Y = 0;
+function backToList(){ renderList(); window.scrollTo(0, LIST_Y); }
+window.addEventListener('popstate', () => { if($('#post')) backToList(); });
+
 function showPreview(title, body, files, ids){
   ids.forEach(i => USED.add(i)); save('wc_used', USED);
+  LIST_Y = window.scrollY;
+  history.pushState({preview: true}, '');
   $('#main').innerHTML = `
     <div class="bar">
       <button class="b" id="copyPost">📋 전체 복사 (글+사진)</button>
@@ -194,7 +200,7 @@ function showPreview(title, body, files, ids){
     <p><b>제목</b> <input id="ptitle" type="text" value="${esc(title)}"></p>
     <div class="preview" id="post" contenteditable="true">${body}</div>`;
   window.scrollTo(0, 0);
-  $('#back').onclick = renderList;
+  $('#back').onclick = () => history.back();
   $('#copyTitle').onclick = () => navigator.clipboard.writeText($('#ptitle').value).then(() => flash('제목 복사됨'));
   $('#copyPost').onclick = copyPost;
   $('#copyText').onclick = copyTextOnly;
