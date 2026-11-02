@@ -13,6 +13,7 @@ from datetime import datetime, timedelta
 from pathlib import Path
 
 import collector
+import llm_dedupe
 from app import clean_heading, default_comment, fetch_image
 
 BASE = Path(__file__).resolve().parent
@@ -81,8 +82,16 @@ def export() -> None:
             "heading": r["title"] if game else clean_heading(r["title"]),
             "comment": default_comment(r["summary"]),
             "images": imgs,
+            "summary": r["summary"],
         })
     con.close()
+    # Claude API로 같은 소식 묶기 (ANTHROPIC_API_KEY가 있을 때만)
+    merged = []
+    for cat in list(cfg.get("categories", {}).keys()) + ["유머"]:
+        merged += llm_dedupe.dedupe(cat, [it for it in out if it["category"] == cat])
+    out = merged
+    for it in out:
+        it.pop("summary", None)
     cats = {k: {"title": v.get("title", ""), "intro": v.get("intro", ""), "style": v.get("style", "block")}
             for k, v in cfg.get("categories", {}).items()}
     (DOCS / "data").mkdir(exist_ok=True)

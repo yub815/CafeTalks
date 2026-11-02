@@ -24,6 +24,8 @@ jobs:
           cache: pip
       - run: pip install -r requirements.txt
       - name: 수집 + 웹페이지 데이터 만들기
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}  # 없으면 중복 검사만 건너뜀
         run: python build_site.py
       - name: 결과 저장
         run: |

@@ -2,3 +2,4 @@ requests>=2.31
 beautifulsoup4>=4.12
 flask>=3.0
 pillow>=10.0
+anthropic>=2.0
