@@ -13,7 +13,8 @@ jobs:
           r=requests.get("https://web.humoruniv.com/board/humor/list.html?table=pds&st=day",headers=H,timeout=15); r.encoding="cp949"
           s=BeautifulSoup(r.text,"html.parser")
           tr=s.select("tr[id^=li_chk_pds]")
-          print("ROWS",len(tr)); print("ROW|",str(tr[2])[:2500].replace("\n"," "))
+          print("ROWS",len(tr))
+          for t in tr[:3]: print("TDS|",[(td.get("class"),td.get_text(" ",strip=True)[:40]) for td in t.select("td")])
           u="https://web.humoruniv.com/board/humor/"+tr[0].select_one("a[href*=read]")["href"]
           r2=requests.get(u,headers=H,timeout=15); r2.encoding="cp949"; s2=BeautifulSoup(r2.text,"html.parser")
           print("POST",u,r2.status_code)
