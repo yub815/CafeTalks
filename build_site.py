@@ -109,8 +109,12 @@ def backfill_humor_bodies() -> None:
         print(f"  유머 본문 {n}/{len(rows)}개 채움")
 
 
-def filter_humor(out: list[dict]) -> list[dict]:
-    """유머 탭: 시사·정치·사건사고·성별 논쟁 같은 글은 빼고 진짜 유머만 (결과는 data/humorcheck.json에 저장)."""
+def filter_humor(out: list[dict], cfg: dict) -> list[dict]:
+    """유머 탭: 짤 1~2장짜리 짧은 짤만 (사진 수·본문 길이로 먼저 거르고),
+    시사·정치·사건사고·성별 논쟁 같은 글은 Claude가 뺌 (결과는 data/humorcheck.json에 저장)."""
+    max_imgs = cfg.get("humor_max_images", 2)
+    out = [it for it in out if it["category"] != "유머"
+           or (len(it["images"]) <= max_imgs and len(it.get("comment") or "") <= 200)]
     path = BASE / "data" / "humorcheck.json"
     try:
         cache = json.loads(path.read_text(encoding="utf-8"))
@@ -119,7 +123,8 @@ def filter_humor(out: list[dict]) -> list[dict]:
     todo = [it for it in out if it["category"] == "유머" and it["url"] not in cache]
     for start in range(0, len(todo), 40):
         part = todo[start:start + 40]
-        res = llm_dedupe.humor_filter([{"title": it["title"], "body": it.get("comment", "")} for it in part])
+        res = llm_dedupe.humor_filter([{"title": it["title"], "body": it.get("comment", ""),
+                                         "images": len(it["images"])} for it in part])
         for i, ok in res.items():
             cache[part[i]["url"]] = ok
     result = [it for it in out if not (it["category"] == "유머" and cache.get(it["url"]) is False)]
@@ -169,7 +174,7 @@ def export() -> None:
         merged += llm_dedupe.dedupe(cat, [it for it in out if it["category"] == cat])
     out = merged
     out = check_product_images(out, cfg)
-    out = filter_humor(out)
+    out = filter_humor(out, cfg)
     # Claude API로 카페 말투 제목줄·코멘트 (한 번 쓴 건 data/comments.json에 저장해서 재사용)
     cache_path = BASE / "data" / "comments.json"
     try:

@@ -88,7 +88,9 @@ def get(url: str, **kw) -> requests.Response | None:
         try:
             r = session.get(url, timeout=15, **kw)
             if "charset" not in r.headers.get("Content-Type", "").lower():
-                r.encoding = "utf-8"  # 인코딩 표기가 없으면 깨지지 않게 UTF-8로
+                # 인코딩 표기가 없으면 UTF-8로, 페이지 안에 euc-kr 표시가 있으면 cp949로
+                head = r.content[:3000].lower()
+                r.encoding = "cp949" if (b"euc-kr" in head or b"ks_c_5601" in head) else "utf-8"
             if r.status_code == 200:
                 return r
             log(f"  ! {r.status_code} {url}")
@@ -112,7 +114,7 @@ def parse_list_time(text: str, title_attr: str | None = None) -> str:
         if not raw:
             continue
         raw = raw.strip()
-        for fmt in ("%Y-%m-%d %H:%M:%S", "%Y.%m.%d %H:%M", "%Y.%m.%d", "%y/%m/%d", "%y.%m.%d", "%Y-%m-%d"):
+        for fmt in ("%Y-%m-%d %H:%M:%S", "%Y-%m-%d %H:%M", "%Y.%m.%d %H:%M", "%Y.%m.%d", "%y/%m/%d", "%y.%m.%d", "%Y-%m-%d"):
             try:
                 return datetime.strptime(raw, fmt).replace(tzinfo=KST).isoformat()
             except ValueError:
@@ -167,7 +169,7 @@ def _box_images(box, url: str, limit: int) -> list[str]:
     out = []
     for img in box.select("img"):
         src = img.get("data-original") or img.get("data-src") or img.get("src") or ""
-        if not src or src.startswith("data:") or "emoticon" in src or "dccon" in src:
+        if not src or src.startswith("data:") or "emoticon" in src or "dccon" in src or "thumb.php" in src:
             continue
         src = urljoin(url, src)
         if src not in out:
@@ -276,7 +278,42 @@ def collect_theqoo(pages: int) -> list[dict]:
     return items
 
 
+# ---------------------------------------------------------------- 유머: 웃긴대학 오늘의 베스트 (짧은 짤 위주)
+def collect_humoruniv(pages: int) -> list[dict]:
+    items = []
+    for p in range(pages):
+        r = get(f"https://web.humoruniv.com/board/humor/list.html?table=pds&st=day&pg={p}")
+        if not r:
+            break
+        soup = BeautifulSoup(r.text, "html.parser")
+        for tr in soup.select("tr[id^=li_chk_pds]"):
+            a = tr.select_one("td.li_sbj a[href*=read]")
+            if not a:
+                continue
+            title_tag = tr.select_one("td.li_sbj span[id^=title_chk]")
+            title = (title_tag or a).get_text(" ", strip=True)
+            title = re.sub(r"\s*\[\d+\]\s*(답글추천.*)?$", "", title).strip()
+            m = re.search(r"\[(\d+)\]", a.get_text(" ", strip=True))
+            nums = [to_int(td.get_text()) for td in tr.select("td.li_und")]
+            t = tr.select_one("td.li_date")
+            num = re.search(r"number=(\d+)", a["href"])
+            if not num:
+                continue
+            items.append({
+                "category": "유머", "source": "웃긴대학",
+                "url": f"https://web.humoruniv.com/board/humor/read.html?table=pds&number={num.group(1)}",
+                "title": title,
+                "views": nums[0] if nums else 0,
+                "likes": nums[1] if len(nums) > 1 else 0,
+                "comments": int(m.group(1)) if m else 0,
+                "posted_at": parse_list_time(t.get_text() if t else ""),
+            })
+        time.sleep(1)
+    return items
+
+
 IMAGE_SELECTORS = {
+    "웃긴대학": ("div.body_editor", "https://web.humoruniv.com/"),
     "디시 실베": ("div.write_div", "https://gall.dcinside.com/"),
     "루리웹 유머 BEST": ("div.view_content", None),
     "루리웹 게임뉴스": ("div.view_content", None),
@@ -615,6 +652,7 @@ def main() -> None:
          lambda c: collect_ruliweb_list("https://bbs.ruliweb.com/best/humor_only?page={page}",
                                         c.get("pages", 2), "유머", "루리웹 유머 BEST")),
         ("theqoo_hot", "더쿠 HOT", lambda c: collect_theqoo(c.get("pages", 2))),
+        ("humoruniv_best", "웃긴대학", lambda c: collect_humoruniv(c.get("pages", 2))),
     ]
     for key, name, fn in jobs:
         c = hs.get(key, {})
