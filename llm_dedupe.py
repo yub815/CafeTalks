@@ -206,6 +206,15 @@ PICK_SCHEMA = {
 }
 
 
+def _size(path) -> str:
+    try:
+        from PIL import Image
+        w, h = Image.open(path).size
+        return f"{w}x{h}"
+    except Exception:
+        return "크기 모름"
+
+
 def _b64_small(path) -> str | None:
     import base64, io
     try:
@@ -241,14 +250,15 @@ def _pick_batch(category: str, items: list[dict]) -> dict[int, list[int]]:
         "좋은 사진: 제품/패키지/메뉴 사진, 공식 홍보 이미지(제품이 크게 나온 것).\n"
         "빼야 할 사진: 사람(연예인, 모델, 방송 캡처)이 주인공이고 제품이 안 보이거나 작은 것, 매장 외관, 로고만 있는 것, "
         "다른 제품, 표/그래프, 기사 제목과 상관없는 것.\n"
-        "같은 사진이 잘린 썸네일과 전체 원본으로 둘 다 있으면, 글자나 제품이 잘리지 않은 전체 원본만 고르세요.\n"
+        "사진마다 크기(가로x세로 픽셀)를 적어 뒀어요. 제품이 보이는 사진이면 작거나 조금 잘려도 빼지 말고, "
+        "순서만 크고 선명하고 안 잘린 사진이 앞에 오게 해 주세요. 같은 사진의 작은 버전과 큰 버전이 있으면 큰 것만 넣으세요.\n"
         "keep에는 좋은 사진 번호를 좋은 순서로 넣고, 하나도 없으면 빈 배열로 주세요.")}]
     for i, it in enumerate(items):
         content.append({"type": "text", "text": f"\n[항목 {i}] {it['title']}"})
         for j, p in enumerate(it["paths"]):
             b = _b64_small(p)
             if b:
-                content.append({"type": "text", "text": f"항목 {i} 사진 {j}:"})
+                content.append({"type": "text", "text": f"항목 {i} 사진 {j} ({_size(p)}):"})
                 content.append({"type": "image", "source": {"type": "base64", "media_type": "image/jpeg", "data": b}})
     client = anthropic.Anthropic()
     try:

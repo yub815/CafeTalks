@@ -67,7 +67,8 @@ def check_product_images(out: list[dict], cfg: dict) -> list[dict]:
     todo = [it for it in out if it["category"] in cats and it["url"] not in cache]
     for it in todo:
         cands = []
-        for u in collector.article_images(it["url"]) + it["source_images"]:
+        src = [v for u in it["source_images"] for v in (collector.untumb(u), u) if v]
+        for u in collector.article_images(it["url"]) + src:
             p = save_image(u)
             if p and p not in cands and not p.endswith((".gif", ".mp4")):
                 cands.append(p)

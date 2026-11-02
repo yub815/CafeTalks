@@ -343,6 +343,9 @@ def og_image(url: str) -> str | None:
 
 def untumb(u: str) -> str | None:
     v = re.sub(r"(_\d+)?_(thum|thumb|s)(?=\.(jpe?g|png|webp)$)", "", u, flags=re.I)
+    # 국내 뉴스 사이트 공통 형식: /news/thumbnail/202611/123_456_789_v150.jpg → /news/photo/202611/123_456_789.jpg
+    v = re.sub(r"/news/thumbnail/(\d+/[\w]+?)_v\d+(\.\w+)$", r"/news/photo/\1\2", v)
+    v = re.sub(r"-\d{2,4}x\d{2,4}(?=\.(jpe?g|png|webp)$)", "", v, flags=re.I)  # 워드프레스 -300x188
     v = re.sub(r"/(thumb|thumbnail|thumbs)/", "/", v, flags=re.I)
     return v if v != u else None
 
