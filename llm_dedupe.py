@@ -194,3 +194,87 @@ def _write_batch(category: str, style: str, items: list[dict]) -> dict[int, dict
         if isinstance(i, int) and 0 <= i < len(items) and r.get("comment"):
             out[i] = {"heading": r.get("heading", "").strip(), "comment": r["comment"].strip()}
     return out
+
+
+PICK_SCHEMA = {
+    "type": "object",
+    "properties": {"items": {"type": "array", "items": {
+        "type": "object",
+        "properties": {"i": {"type": "integer"}, "keep": {"type": "array", "items": {"type": "integer"}}},
+        "required": ["i", "keep"], "additionalProperties": False}}},
+    "required": ["items"], "additionalProperties": False,
+}
+
+
+def _b64_small(path) -> str | None:
+    import base64, io
+    try:
+        from PIL import Image
+        im = Image.open(path).convert("RGB")
+        im.thumbnail((512, 512))
+        buf = io.BytesIO()
+        im.save(buf, "JPEG", quality=80)
+        return base64.b64encode(buf.getvalue()).decode()
+    except Exception:
+        return None
+
+
+def pick_product_images(category: str, items: list[dict]) -> dict[int, list[int]]:
+    """items: [{"title", "paths": [로컬 jpg 경로]}] → {번호: [제품이 보이는 사진 번호, 좋은 순]}.
+    4개씩 나눠서 사진을 직접 보고 고름. 키가 없거나 실패한 항목은 결과에 없음."""
+    out: dict[int, list[int]] = {}
+    for start in range(0, len(items), 4):
+        part = _pick_batch(category, items[start:start + 4])
+        out.update({start + i: k for i, k in part.items()})
+    if items:
+        print(f"  [{category}] Claude가 사진 {len(out)}개 항목을 확인했어요")
+    return out
+
+
+def _pick_batch(category: str, items: list[dict]) -> dict[int, list[int]]:
+    if not items or not os.environ.get("ANTHROPIC_API_KEY"):
+        return {}
+    import anthropic
+
+    content = [{"type": "text", "text": (
+        f"네이버 카페 '{category}' 모음글에 넣을 사진을 고르려고 해요. 항목마다 신상 제품 자체가 잘 보이는 사진만 골라 주세요.\n"
+        "좋은 사진: 제품/패키지/메뉴 사진, 공식 홍보 이미지(제품이 크게 나온 것).\n"
+        "빼야 할 사진: 사람(연예인, 모델, 방송 캡처)이 주인공이고 제품이 안 보이거나 작은 것, 매장 외관, 로고만 있는 것, "
+        "다른 제품, 표/그래프, 기사 제목과 상관없는 것.\n"
+        "keep에는 좋은 사진 번호를 좋은 순서로 넣고, 하나도 없으면 빈 배열로 주세요.")}]
+    for i, it in enumerate(items):
+        content.append({"type": "text", "text": f"\n[항목 {i}] {it['title']}"})
+        for j, p in enumerate(it["paths"]):
+            b = _b64_small(p)
+            if b:
+                content.append({"type": "text", "text": f"항목 {i} 사진 {j}:"})
+                content.append({"type": "image", "source": {"type": "base64", "media_type": "image/jpeg", "data": b}})
+    client = anthropic.Anthropic()
+    try:
+        response = client.beta.messages.create(
+            model=MODEL,
+            max_tokens=4000,
+            betas=["server-side-fallback-2026-07-01"],
+            fallbacks="default",
+            output_config={"effort": "low", "format": {"type": "json_schema", "schema": PICK_SCHEMA}},
+            messages=[{"role": "user", "content": content}],
+        )
+    except anthropic.APIStatusError as e:
+        print(f"  ! Claude API 오류({e.status_code}). 사진 확인을 건너뜁니다.")
+        return {}
+    except anthropic.APIConnectionError:
+        print("  ! Claude API 접속 실패. 사진 확인을 건너뜁니다.")
+        return {}
+    if response.stop_reason in ("refusal", "max_tokens"):
+        return {}
+    text = next((b.text for b in response.content if b.type == "text"), "")
+    try:
+        rows = json.loads(text).get("items", [])
+    except (json.JSONDecodeError, AttributeError):
+        return {}
+    out = {}
+    for r in rows:
+        i = r.get("i")
+        if isinstance(i, int) and 0 <= i < len(items):
+            out[i] = [k for k in r.get("keep", []) if isinstance(k, int) and 0 <= k < len(items[i]["paths"])]
+    return out

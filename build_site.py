@@ -54,6 +54,43 @@ def save_image(url: str) -> str | None:
         return None
 
 
+def check_product_images(out: list[dict], cfg: dict) -> list[dict]:
+    """신상: 기사 본문 사진까지 모은 뒤 Claude가 제품이 보이는 사진만 남김. 맞는 사진이 없으면 항목을 뺌.
+    결과는 data/imgcheck.json에 저장해서 다음 실행 때 다시 묻지 않음."""
+    cats = cfg.get("photo_check_categories", ["신상"])
+    path = BASE / "data" / "imgcheck.json"
+    try:
+        cache = json.loads(path.read_text(encoding="utf-8"))
+    except (FileNotFoundError, json.JSONDecodeError):
+        cache = {}
+    todo = [it for it in out if it["category"] in cats and it["url"] not in cache]
+    for it in todo:
+        cands = list(it["images"])
+        for u in collector.article_images(it["url"]):
+            p = save_image(u)
+            if p and p not in cands and not p.endswith((".gif", ".mp4")):
+                cands.append(p)
+        it["images"] = cands[:6]
+    for cat in cats:
+        group = [it for it in todo if it["category"] == cat]
+        picked = llm_dedupe.pick_product_images(cat, [
+            {"title": it["title"], "paths": [str(DOCS / p) for p in it["images"]]} for it in group])
+        for i, keep in picked.items():
+            cache[group[i]["url"]] = [group[i]["images"][k] for k in keep]
+    result = []
+    for it in out:
+        if it["category"] in cats and it["url"] in cache:
+            it["images"] = [p for p in cache[it["url"]] if (DOCS / p).exists()]
+            if not it["images"]:
+                print(f"  - 제품 사진이 없어서 뺌: {it['title'][:40]}")
+                continue
+        result.append(it)
+    keep_urls = {it["url"] for it in out}
+    path.write_text(json.dumps({u: v for u, v in cache.items() if u in keep_urls}, ensure_ascii=False, indent=1),
+                    encoding="utf-8")
+    return result
+
+
 def export() -> None:
     cfg = collector.load_config()
     IMG.mkdir(parents=True, exist_ok=True)
@@ -90,6 +127,7 @@ def export() -> None:
     for cat in list(cfg.get("categories", {}).keys()) + ["유머"]:
         merged += llm_dedupe.dedupe(cat, [it for it in out if it["category"] == cat])
     out = merged
+    out = check_product_images(out, cfg)
     # Claude API로 카페 말투 제목줄·코멘트 (한 번 쓴 건 data/comments.json에 저장해서 재사용)
     cache_path = BASE / "data" / "comments.json"
     try:
@@ -118,6 +156,7 @@ def export() -> None:
         "updated": datetime.now(collector.KST).isoformat(timespec="minutes"),
         "categories": cats, "items": out}, ensure_ascii=False), encoding="utf-8")
     # 오래된 이미지 정리
+    keep |= {Path(p).name for it in out for p in it["images"]}
     cutoff = datetime.now().timestamp() - KEEP_DAYS * 86400
     for f in IMG.iterdir():
         if f.name not in keep and f.stat().st_mtime < cutoff:

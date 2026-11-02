@@ -317,6 +317,35 @@ def og_image(url: str) -> str | None:
     return urljoin(url, tag["content"]) if tag and tag.get("content") else None
 
 
+def article_images(url: str, limit: int = 6) -> list[str]:
+    """기사 본문 사진들 (대표 이미지 + 본문 img). 로고·아이콘은 뺌."""
+    r = get(url)
+    if not r:
+        return []
+    soup = BeautifulSoup(r.text, "html.parser")
+    found = []
+    tag = soup.select_one('meta[property="og:image"], meta[name="og:image"], meta[name="twitter:image"]')
+    if tag and tag.get("content"):
+        found.append(urljoin(url, tag["content"]))
+    body = soup.select_one("article, [itemprop=articleBody], #articleBody, #article-view-content-div, "
+                           ".article_body, .article-body, #article_body, .news_body, #newsct_article, .view_con") or soup
+    for img in body.select("img"):
+        src = img.get("data-src") or img.get("data-original") or img.get("src") or ""
+        if not src or src.startswith("data:") or src.endswith((".svg", ".gif")):
+            continue
+        try:
+            if int(img.get("width") or 999) < 200:
+                continue
+        except ValueError:
+            pass
+        found.append(urljoin(url, src))
+    out = []
+    for u in found:
+        if u not in out and not is_logo(u):
+            out.append(u)
+    return out[:limit]
+
+
 LOGO_HINTS = ("logo", "default", "og_image", "ogimage", "og-image", "noimage", "no_image", "sns_", "share",
               "symbol", "ci.", "/ci/", "favicon", "banner")
 NEWS_EXCLUDE_DEFAULT = ["칼럼", "사설", "기고", "오피니언", "기자수첩", "인터뷰", "취재", "분석", "전망", "질문",
