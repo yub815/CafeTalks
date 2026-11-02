@@ -4,6 +4,11 @@ on:
   schedule:
     - cron: "0 21 * * *"   # 매일 오전 6시 (한국 시간)
   workflow_dispatch:        # Actions 탭에서 "Run workflow"로 바로 수집
+    inputs:
+      export_only:
+        description: "새로 수집하지 않고, 모아둔 자료로 웹페이지만 다시 만들기 (빠름)"
+        type: boolean
+        default: false
 
 permissions:
   contents: write
@@ -28,7 +33,7 @@ jobs:
       - name: 수집 + 웹페이지 데이터 만들기
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}  # 없으면 중복 검사만 건너뜀
-        run: python build_site.py
+        run: python build_site.py ${{ inputs.export_only && '--export-only' || '' }}
       - name: 결과 저장
         run: |
           git config user.name "collector-bot"

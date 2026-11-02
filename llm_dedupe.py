@@ -95,3 +95,92 @@ def dedupe(category: str, items: list[dict]) -> list[dict]:
     if groups:
         print(f"  [{category}] Claude가 중복 {len(drop)}개를 묶었어요 ({len(groups)}묶음)")
     return [it for i, it in enumerate(items) if i not in drop]
+
+
+# ---------------------------------------------------------------- 카페 말투로 제목줄·코멘트 쓰기
+STYLE_EXAMPLES = {
+    "block": (
+        "예시 1)\n제목줄: 컴포즈 커피 와플\n코멘트:\n컴포즈 와플도 하고 있었구만\n가을을 맞아서 살 많이 찌는\n"
+        "신메뉴 와플들이 추가로 나왔다고 하네요\n설마 매장에서 직접 반죽부어 굽나\n\n"
+        "예시 2)\n제목줄: 뚜레쥬르 미피케이크\n코멘트:\n뭔가 캐릭터들 머리가 효수된\n아이스크림 케이크 2종이 나왔습니다\n"
+        "저 가운데 꽂힌게 열어보면 포크라는데\n생긴거 보니 실용성은 별로 없어보이는"
+    ),
+    "numbered": (
+        "예시)\n제목줄: 예스노탐정\n코멘트:\n추리게임인데\n'예' '아니오'로 답할 수 있는 질문을 하면 AI가 대답해줌\n"
+        "이걸로 정답을 제출하면 되는 간단한 추리게임\n최대한 질문수를 줄이면 등급이 높아지니 추천추천"
+    ),
+}
+
+WRITE_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "items": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "i": {"type": "integer"},
+                    "heading": {"type": "string"},
+                    "comment": {"type": "string"},
+                },
+                "required": ["i", "heading", "comment"],
+                "additionalProperties": False,
+            },
+        }
+    },
+    "required": ["items"],
+    "additionalProperties": False,
+}
+
+
+def write_comments(category: str, style: str, items: list[dict]) -> dict[int, dict]:
+    """items: [{"title","summary"}] → {번호: {"heading", "comment"}}. 키가 없거나 실패하면 {}."""
+    if not items or not os.environ.get("ANTHROPIC_API_KEY"):
+        return {}
+    import anthropic
+
+    lines = []
+    for i, it in enumerate(items):
+        summary = (it.get("summary") or "").replace("\n", " ")[:300]
+        lines.append(f"{i} | {it['title']} | {summary}")
+    prompt = (
+        f"네이버 카페의 '{category}' 모음글에 들어갈 항목별 '제목줄'과 '코멘트'를 써 주세요.\n\n"
+        "말투는 아래 예시처럼, 친구한테 툭 던지듯 가볍고 짧은 구어체로 써 주세요. 뉴스 기사체(~했다, ~밝혔다, 기자명, 회사 설명)는 쓰지 마세요.\n"
+        "- 제목줄: 브랜드/작품/게임 이름 + 제품명 정도로 짧게 (예: '이디야 뉴바이트 디저트 3종')\n"
+        "- 코멘트: 2~4줄. 줄마다 짧게 끊어서 줄바꿈(\\n). 무엇이 나왔는지 + 핵심 정보 1~2개(가격, 기간 한정, 특징 등 요약에 있는 것만) + 가벼운 감상 한마디.\n"
+        "- 요약에 없는 사실은 지어내지 마세요. 정보가 부족하면 짧게 쓰면 돼요.\n"
+        "- 문장 끝에 마침표는 찍지 마세요. 이모지는 쓰지 마세요.\n\n"
+        f"{STYLE_EXAMPLES.get(style, STYLE_EXAMPLES['block'])}\n\n"
+        "아래 목록의 모든 항목(번호 | 원래 제목 | 요약)에 대해 써 주세요.\n\n" + "\n".join(lines)
+    )
+    client = anthropic.Anthropic()
+    try:
+        response = client.beta.messages.create(
+            model=MODEL,
+            max_tokens=32000,
+            betas=["server-side-fallback-2026-07-01"],
+            fallbacks="default",
+            output_config={"effort": "low", "format": {"type": "json_schema", "schema": WRITE_SCHEMA}},
+            messages=[{"role": "user", "content": prompt}],
+        )
+    except anthropic.APIStatusError as e:
+        print(f"  ! Claude API 오류({e.status_code}). 코멘트는 기사 요약으로 둡니다.")
+        return {}
+    except anthropic.APIConnectionError:
+        print("  ! Claude API 접속 실패. 코멘트는 기사 요약으로 둡니다.")
+        return {}
+    if response.stop_reason in ("refusal", "max_tokens"):
+        print(f"  ! Claude 응답 중단({response.stop_reason}). 코멘트는 기사 요약으로 둡니다.")
+        return {}
+    text = next((b.text for b in response.content if b.type == "text"), "")
+    try:
+        rows = json.loads(text).get("items", [])
+    except (json.JSONDecodeError, AttributeError):
+        return {}
+    out = {}
+    for r in rows:
+        i = r.get("i")
+        if isinstance(i, int) and 0 <= i < len(items) and r.get("comment"):
+            out[i] = {"heading": r.get("heading", "").strip(), "comment": r["comment"].strip()}
+    print(f"  [{category}] Claude가 코멘트 {len(out)}개를 썼어요")
+    return out

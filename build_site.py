@@ -90,6 +90,25 @@ def export() -> None:
     for cat in list(cfg.get("categories", {}).keys()) + ["유머"]:
         merged += llm_dedupe.dedupe(cat, [it for it in out if it["category"] == cat])
     out = merged
+    # Claude API로 카페 말투 제목줄·코멘트 (한 번 쓴 건 data/comments.json에 저장해서 재사용)
+    cache_path = BASE / "data" / "comments.json"
+    try:
+        cache = json.loads(cache_path.read_text(encoding="utf-8"))
+    except (FileNotFoundError, json.JSONDecodeError):
+        cache = {}
+    for cat, conf in cfg.get("categories", {}).items():
+        todo = [it for it in out if it["category"] == cat and it["url"] not in cache]
+        written = llm_dedupe.write_comments(cat, conf.get("style", "block"), todo)
+        for i, w in written.items():
+            cache[todo[i]["url"]] = w
+    for it in out:
+        w = cache.get(it["url"])
+        if w and it["category"] != "유머":
+            it["heading"] = w["heading"] or it["heading"]
+            it["comment"] = w["comment"]
+    keep_urls = {it["url"] for it in out}
+    cache = {u: w for u, w in cache.items() if u in keep_urls}
+    cache_path.write_text(json.dumps(cache, ensure_ascii=False, indent=1), encoding="utf-8")
     for it in out:
         it.pop("summary", None)
     cats = {k: {"title": v.get("title", ""), "intro": v.get("intro", ""), "style": v.get("style", "block")}
