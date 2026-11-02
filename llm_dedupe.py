@@ -194,7 +194,7 @@ def _write_batch(category: str, style: str, items: list[dict]) -> dict[int, dict
     for r in rows:
         i = r.get("i")
         if isinstance(i, int) and 0 <= i < len(items) and r.get("comment"):
-            out[i] = {"heading": r.get("heading", "").strip(), "comment": r["comment"].strip()}
+            out[i] = {"heading": r.get("heading", "").strip(), "comment": r["comment"].strip().replace("다다요", "다요")}
     return out
 
 
