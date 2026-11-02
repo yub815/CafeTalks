@@ -150,7 +150,7 @@
       "pages": 3
     }
   },
-  "humor_candidates": 30,
+  "humor_candidates": 60,
   "news_per_category": 40,
   "humor_exclude_words": [
     "정치",

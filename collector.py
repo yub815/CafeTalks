@@ -169,7 +169,8 @@ def _box_images(box, url: str, limit: int) -> list[str]:
     out = []
     for img in box.select("img"):
         src = img.get("data-original") or img.get("data-src") or img.get("src") or ""
-        if not src or src.startswith("data:") or "emoticon" in src or "dccon" in src or "thumb.php" in src:
+        if not src or src.startswith("data:") or "emoticon" in src or "dccon" in src or "thumb.php" in src \
+                or "loading" in src or "/images/" in src.split("?")[0][-40:]:
             continue
         src = urljoin(url, src)
         if src not in out:
@@ -678,11 +679,18 @@ def main() -> None:
     for h in top:
         sel, ref = IMAGE_SELECTORS.get(h["source"], ("body", None))
         h["images"], h["summary"] = post_content(h["url"], sel, ref)
+        time.sleep(0.5)
+    # 여러 글에 똑같이 붙는 사진(사이트 배너·서명 이미지)은 짤이 아니라서 뺌
+    seen: dict[str, int] = {}
+    for h in top:
+        for u in set(h.get("images", [])):
+            seen[u] = seen.get(u, 0) + 1
+    for h in top:
+        h["images"] = [u for u in h.get("images", []) if seen.get(u, 0) < 2]
         if not h["images"]:
             continue  # 짤 없는 글은 제외
         upsert(con, h)
         total += 1
-        time.sleep(0.5)
     con.commit()
 
     # 2) 루리웹 게임 뉴스 (신작 게임 보강)
