@@ -141,9 +141,18 @@ def export() -> None:
         written = llm_dedupe.write_comments(cat, conf.get("style", "block"), todo)
         for i, w in written.items():
             cache[todo[i]["url"]] = w
+    # 유머: 사진을 보고 2~3줄 코멘트 (본문이 없어서 짤만 덩그러니 남지 않게)
+    todo = [it for it in out if it["category"] == "유머" and it["url"] not in cache]
+    caps = llm_dedupe.humor_captions([
+        {"title": it["title"], "paths": [str(DOCS / p) for p in it["images"] if p.endswith((".jpg", ".png", ".webp"))]}
+        for it in todo])
+    for i, c in caps.items():
+        cache[todo[i]["url"]] = {"heading": "", "comment": c}
     for it in out:
         w = cache.get(it["url"])
-        if w and it["category"] != "유머":
+        if w and it["category"] == "유머":
+            it["comment"] = w["comment"]
+        elif w:
             it["heading"] = w["heading"] or it["heading"]
             it["comment"] = w["comment"]
     keep_urls = {it["url"] for it in out}

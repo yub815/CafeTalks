@@ -278,3 +278,69 @@ def _pick_batch(category: str, items: list[dict]) -> dict[int, list[int]]:
         if isinstance(i, int) and 0 <= i < len(items):
             out[i] = [k for k in r.get("keep", []) if isinstance(k, int) and 0 <= k < len(items[i]["paths"])]
     return out
+
+
+def humor_captions(items: list[dict]) -> dict[int, str]:
+    """유머 짤: [{"title", "paths"}] → {번호: 2~3줄 코멘트}. 사진을 보고 씀. 4개씩 나눠 요청."""
+    out: dict[int, str] = {}
+    for start in range(0, len(items), 4):
+        part = _caption_batch(items[start:start + 4])
+        out.update({start + i: c for i, c in part.items()})
+    if items:
+        print(f"  [유머] Claude가 짤 코멘트 {len(out)}개를 썼어요")
+    return out
+
+
+CAPTION_SCHEMA = {
+    "type": "object",
+    "properties": {"items": {"type": "array", "items": {
+        "type": "object",
+        "properties": {"i": {"type": "integer"}, "comment": {"type": "string"}},
+        "required": ["i", "comment"], "additionalProperties": False}}},
+    "required": ["items"], "additionalProperties": False,
+}
+
+
+def _caption_batch(items: list[dict]) -> dict[int, str]:
+    if not items or not os.environ.get("ANTHROPIC_API_KEY"):
+        return {}
+    import anthropic
+
+    content = [{"type": "text", "text": (
+        "네이버 카페 유머 게시판에 짤 하나씩 올리는 글이에요. 항목마다 사진 아래에 붙일 코멘트를 써 주세요.\n"
+        "- 2~3줄, 줄마다 짧게 끊어서 줄바꿈(\\n)\n"
+        "- 첫 줄은 무슨 짤인지 한마디로(상황 설명), 다음 줄은 가벼운 드립이나 감상\n"
+        "- 친구한테 말하듯 가벼운 구어체. 뉴스체 금지. 마침표, 이모지, 'ㅋㅋㅋ' 남발 금지(쓰더라도 한 번)\n"
+        "- 사진과 제목에서 보이는 것만 말하고 지어내지 마세요. 정치·혐오·비하 표현 금지\n"
+        "예시: '자전거 얼마냐고 물어봤다가\\n가격 듣고 조용해지는 사람들\\n취미는 원래 돈이 드는 거라지만'")}]
+    for i, it in enumerate(items):
+        content.append({"type": "text", "text": f"\n[항목 {i}] 제목: {it['title']}"})
+        for p in it["paths"][:3]:
+            b = _b64_small(p)
+            if b:
+                content.append({"type": "image", "source": {"type": "base64", "media_type": "image/jpeg", "data": b}})
+    client = anthropic.Anthropic()
+    try:
+        response = client.beta.messages.create(
+            model=MODEL,
+            max_tokens=4000,
+            betas=["server-side-fallback-2026-07-01"],
+            fallbacks="default",
+            output_config={"effort": "low", "format": {"type": "json_schema", "schema": CAPTION_SCHEMA}},
+            messages=[{"role": "user", "content": content}],
+        )
+    except anthropic.APIStatusError as e:
+        print(f"  ! Claude API 오류({e.status_code}). 짤 코멘트를 건너뜁니다.")
+        return {}
+    except anthropic.APIConnectionError:
+        print("  ! Claude API 접속 실패. 짤 코멘트를 건너뜁니다.")
+        return {}
+    if response.stop_reason in ("refusal", "max_tokens"):
+        return {}
+    text = next((b.text for b in response.content if b.type == "text"), "")
+    try:
+        rows = json.loads(text).get("items", [])
+    except (json.JSONDecodeError, AttributeError):
+        return {}
+    return {r["i"]: r["comment"].strip() for r in rows
+            if isinstance(r.get("i"), int) and 0 <= r["i"] < len(items) and r.get("comment")}
