@@ -134,6 +134,17 @@ WRITE_SCHEMA = {
 
 
 def write_comments(category: str, style: str, items: list[dict]) -> dict[int, dict]:
+    """20개씩 나눠서 요청 (요청 하나가 너무 길어지지 않게)."""
+    out: dict[int, dict] = {}
+    for start in range(0, len(items), 20):
+        part = _write_batch(category, style, items[start:start + 20])
+        out.update({start + i: w for i, w in part.items()})
+    if out:
+        print(f"  [{category}] Claude가 코멘트 {len(out)}개를 썼어요")
+    return out
+
+
+def _write_batch(category: str, style: str, items: list[dict]) -> dict[int, dict]:
     """items: [{"title","summary"}] → {번호: {"heading", "comment"}}. 키가 없거나 실패하면 {}."""
     if not items or not os.environ.get("ANTHROPIC_API_KEY"):
         return {}
@@ -157,7 +168,7 @@ def write_comments(category: str, style: str, items: list[dict]) -> dict[int, di
     try:
         response = client.beta.messages.create(
             model=MODEL,
-            max_tokens=32000,
+            max_tokens=16000,
             betas=["server-side-fallback-2026-07-01"],
             fallbacks="default",
             output_config={"effort": "low", "format": {"type": "json_schema", "schema": WRITE_SCHEMA}},
@@ -182,5 +193,4 @@ def write_comments(category: str, style: str, items: list[dict]) -> dict[int, di
         i = r.get("i")
         if isinstance(i, int) and 0 <= i < len(items) and r.get("comment"):
             out[i] = {"heading": r.get("heading", "").strip(), "comment": r["comment"].strip()}
-    print(f"  [{category}] Claude가 코멘트 {len(out)}개를 썼어요")
     return out
