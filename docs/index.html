@@ -164,7 +164,7 @@ function buildRoundup(){
     if(conf.style === 'numbered'){
       parts.push(`<p><b>${k + 1}. ${esc(heading)}</b></p><p><a href="${esc(it.url)}">${esc(it.url)}</a></p>`);
     }else{
-      parts.push(`<p style="text-align:center"><b><i><span style="font-size:13px">${esc(heading)}</span></i></b></p>`);
+      parts.push(`<p style="text-align:center"><b><i><span style="font-size:16px">${esc(heading)}</span></i></b></p>`);
     }
     imgs.forEach(s => { parts.push(imgTag(s)); files.push(s); });
     parts.push(linesHtml(comment), '<p>&nbsp;</p><p>&nbsp;</p>');
