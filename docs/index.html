@@ -20,22 +20,29 @@ main{max-width:1100px;margin:0 auto;padding:16px}
 button.b{background:var(--accent);color:#000;border:0;border-radius:8px;padding:9px 16px;font-weight:700;cursor:pointer;font-size:14px}
 button.g{background:transparent;color:var(--text);border:1px solid var(--line);border-radius:8px;padding:8px 14px;cursor:pointer;font-size:14px}
 .meta{color:var(--muted);font-size:13px}
-.card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px;margin-bottom:12px;display:grid;grid-template-columns:28px 180px 1fr;gap:12px}
-.card.sel{border-color:var(--accent)}
+.card{background:var(--panel);border:2px solid var(--line);border-radius:12px;padding:12px;margin-bottom:12px;display:grid;grid-template-columns:28px 180px 1fr;gap:12px}
+.card.pickable{cursor:pointer}
+.card.sel{border-color:var(--accent);background:#1f2a1a}
+.pick{width:22px;height:22px;cursor:pointer;accent-color:var(--accent)}
 .pic img,.pic video{width:180px;height:130px;object-fit:cover;border-radius:8px;background:#000;display:block}
 .title{font-weight:700;margin:2px 0 6px}
 input[type=text],textarea{width:100%;background:#111;color:var(--text);border:1px solid var(--line);border-radius:6px;padding:6px 8px;font:inherit}
-textarea{min-height:76px}
+textarea{min-height:100px}
 .thumbs{display:flex;gap:4px;flex-wrap:wrap;margin-top:6px}
-.thumbs label{position:relative}
-.thumbs img{width:56px;height:56px;object-fit:cover;border-radius:6px}
-.thumbs input{position:absolute;left:2px;top:2px}
+.thumbs label{position:relative;cursor:pointer;display:block}
+.thumbs img,.thumbs video{width:56px;height:56px;object-fit:cover;border-radius:6px}
+.thumbs.big{gap:8px}
+.thumbs.big img,.thumbs.big video{width:200px;height:150px;border:3px solid transparent;opacity:.55}
+.thumbs.big input{position:absolute;opacity:0;pointer-events:none}
+.thumbs.big input:checked+img,.thumbs.big input:checked+video{border-color:var(--accent);opacity:1}
+.thumbs.big label::after{content:"";position:absolute;right:8px;top:8px;width:22px;height:22px;border-radius:50%;background:rgba(0,0,0,.6);border:2px solid #fff}
+.thumbs.big label:has(input:checked)::after{content:"✓";background:var(--accent);color:#000;font-weight:700;text-align:center;line-height:22px}
 .empty{color:var(--muted);padding:40px;text-align:center}
 .note{background:#2a2410;border:1px solid #5a4a14;color:#ffd77a;border-radius:8px;padding:10px 14px;margin:10px 0;font-size:14px}
 .preview{background:#000;border:1px solid var(--line);border-radius:12px;padding:24px;max-width:860px}
 .preview img{max-width:100%}
 .linkbtn{background:none;border:0;color:var(--muted);cursor:pointer;font-size:13px;padding:0;text-decoration:underline}
-@media (max-width:700px){.card{grid-template-columns:24px 1fr}.pic{grid-column:2}.pic img{width:100%;height:auto}}
+@media (max-width:700px){.card{grid-template-columns:24px 1fr}.pic{grid-column:2}.pic img{width:100%;height:auto}.thumbs.big img,.thumbs.big video{width:calc(50vw - 40px);height:auto;aspect-ratio:4/3}}
 </style>
 </head>
 <body>
@@ -94,7 +101,7 @@ function renderList(){
   if(!list.length) h += `<div class="empty">이번 주 후보가 없어요.</div>`;
   for(const it of list){
     const used = USED.has(it.id);
-    h += `<div class="card" id="c${it.id}">
+    h += `<div class="card${roundup ? ' pickable' : ''}" id="c${it.id}">
       <div>${roundup ? `<input type="checkbox" class="pick" value="${it.id}">` : ''}</div>
       <div class="pic">${media(it.images[0])}${it.images.length > 1 ? `<div class="meta">+${it.images.length - 1}장</div>` : ''}</div>
       <div>
@@ -108,7 +115,7 @@ function renderList(){
       h += `<input type="text" id="h${it.id}" value="${esc(it.heading)}" placeholder="제목줄">
         <textarea id="t${it.id}" placeholder="코멘트">${esc(it.comment)}</textarea>`;
       if(it.images.length > 1){
-        h += `<div class="meta">넣을 사진:</div><div class="thumbs">` + it.images.map((u, i) =>
+        h += `<div class="meta">넣을 사진 (클릭해서 고르기):</div><div class="thumbs big">` + it.images.map((u, i) =>
           `<label><input type="checkbox" class="img${it.id}" value="${i}" ${i === 0 ? 'checked' : ''}>${media(u)}</label>`).join('') + `</div>`;
       }
     }else{
@@ -123,6 +130,11 @@ function renderList(){
   window.scrollTo(0, 0);
   $('#toggleUsed').onclick = () => { SHOW_USED = !SHOW_USED; renderList(); };
   document.querySelectorAll('.pick').forEach(c => c.onchange = () => c.closest('.card').classList.toggle('sel', c.checked));
+  document.querySelectorAll('.card.pickable').forEach(card => card.addEventListener('click', e => {
+    if(e.target.closest('input, textarea, a, button, label, video')) return;
+    if(getSelection().toString()) return;
+    const c = card.querySelector('.pick'); c.checked = !c.checked; c.onchange();
+  }));
   document.querySelectorAll('[data-hide]').forEach(b => b.onclick = () => { HIDDEN.add(b.dataset.hide); save('wc_hidden', HIDDEN); $('#c' + b.dataset.hide).remove(); });
   document.querySelectorAll('[data-humor]').forEach(b => b.onclick = () => buildHumor(b.dataset.humor));
   ['#buildTop', '#buildBottom'].forEach(s => { const b = $(s); if(b) b.onclick = buildRoundup; });
