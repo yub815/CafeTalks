@@ -1,0 +1,37 @@
+name: probe
+on: workflow_dispatch
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          pip install -q requests beautifulsoup4
+          python - <<'PY'
+          import requests, re
+          from bs4 import BeautifulSoup
+          H={"User-Agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0 Safari/537.36","Accept-Language":"ko-KR,ko;q=0.9"}
+          for u in ["https://www.dogdrip.net/dogdrip?sort_index=popular","https://web.humoruniv.com/board/humor/list.html?table=pds&st=day","https://www.fmkorea.com/best","https://www.instiz.net/pt?srt=3&srd=1"]:
+              try:
+                  r=requests.get(u,headers=H,timeout=15); print("=====",u,r.status_code,len(r.text),r.encoding)
+                  r.encoding=r.apparent_encoding if 'humoruniv' in u else (r.encoding or 'utf-8')
+                  s=BeautifulSoup(r.text,"html.parser")
+                  links=[a for a in s.select("a[href]") if len(a.get_text(strip=True))>8][:400]
+                  shown=0
+                  for a in links:
+                      h=a["href"]
+                      if re.search(r"/dogdrip/\d+|read\.html|/\d{6,}|no=\d+",h):
+                          p=a.find_parent(["tr","li","div"])
+                          print("A|",h[:90],"|",a.get_text(" ",strip=True)[:60],"| class:",a.get("class"),"| parent:",p.name if p else None,p.get("class") if p else None)
+                          shown+=1
+                          if shown==1 and p: print("PARENT_HTML|",str(p)[:1500].replace("\n"," "))
+                          if shown>=12: break
+              except Exception as e: print("ERR",u,e)
+          r=requests.get("https://www.dogdrip.net/dogdrip?sort_index=popular",headers=H,timeout=15)
+          m=re.findall(r'href="(/dogdrip/\d+)',r.text)
+          if m:
+              u="https://www.dogdrip.net"+m[0]; r2=requests.get(u,headers=H,timeout=15); s2=BeautifulSoup(r2.text,"html.parser")
+              print("=====POST",u,r2.status_code)
+              for sel in ["div.rhymix_content","div.xe_content","article","div.ed.article-wrapper"]:
+                  b=s2.select_one(sel); print(sel, bool(b), len(b.select("img")) if b else 0, (b.get_text(" ",strip=True)[:200] if b else ""))
+              for t in s2.select("[class*=vote],[class*=count],[class*=view]")[:15]: print("META|",t.get("class"),t.get_text(" ",strip=True)[:50])
+          PY
