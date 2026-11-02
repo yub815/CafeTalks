@@ -292,3 +292,56 @@ def _pick_batch(category: str, items: list[dict]) -> dict[int, list[int]]:
             out[i] = [k for k in r.get("keep", []) if isinstance(k, int) and 0 <= k < len(items[i]["paths"])]
     return out
 
+
+
+FUNNY_SCHEMA = {
+    "type": "object",
+    "properties": {"items": {"type": "array", "items": {
+        "type": "object",
+        "properties": {"i": {"type": "integer"}, "funny": {"type": "boolean"}},
+        "required": ["i", "funny"], "additionalProperties": False}}},
+    "required": ["items"], "additionalProperties": False,
+}
+
+
+def humor_filter(items: list[dict]) -> dict[int, bool]:
+    """유머 후보: [{"title", "body"}] → {번호: 유머 게시판에 맞으면 True}. 실패하면 {} (전부 통과)."""
+    if not items or not os.environ.get("ANTHROPIC_API_KEY"):
+        return {}
+    import anthropic
+
+    lines = [f"{i} | {it['title']} | {(it.get('body') or '').replace(chr(10), ' ')[:300]}" for i, it in enumerate(items)]
+    prompt = (
+        "네이버 팬카페 '유머' 게시판에 올릴 짤을 고르고 있어요. 아래 커뮤니티 인기글(번호 | 제목 | 본문 앞부분)마다 "
+        "유머 게시판에 맞으면 funny=true, 아니면 false로 답해 주세요.\n"
+        "true: 웃긴 짤, 웃긴 상황·대화, 황당하거나 귀여운 일, 가벼운 드립, 신기한 볼거리.\n"
+        "false: 뉴스·시사·경제 지표·사건사고(사망, 추락, 범죄), 정치·외교·전쟁, 국가·민족 비하나 갈등, "
+        "남녀 갈등·연애 조건 같은 성별 논쟁, 지역·세대 갈등, 혐오, 선정적인 글, 진지한 정보글.\n"
+        "애매하면 false로 해 주세요.\n\n" + "\n".join(lines)
+    )
+    client = anthropic.Anthropic()
+    try:
+        response = client.beta.messages.create(
+            model=MODEL,
+            max_tokens=8000,
+            betas=["server-side-fallback-2026-07-01"],
+            fallbacks="default",
+            output_config={"effort": "low", "format": {"type": "json_schema", "schema": FUNNY_SCHEMA}},
+            messages=[{"role": "user", "content": prompt}],
+        )
+    except anthropic.APIStatusError as e:
+        print(f"  ! Claude API 오류({e.status_code}). 유머 거르기를 건너뜁니다.")
+        return {}
+    except anthropic.APIConnectionError:
+        print("  ! Claude API 접속 실패. 유머 거르기를 건너뜁니다.")
+        return {}
+    if response.stop_reason in ("refusal", "max_tokens"):
+        return {}
+    text = next((b.text for b in response.content if b.type == "text"), "")
+    try:
+        rows = json.loads(text).get("items", [])
+    except (json.JSONDecodeError, AttributeError):
+        return {}
+    out = {r["i"]: bool(r["funny"]) for r in rows if isinstance(r.get("i"), int) and 0 <= r["i"] < len(items)}
+    print(f"  [유머] Claude가 유머 아닌 글 {sum(1 for v in out.values() if not v)}개를 걸렀어요")
+    return out
