@@ -92,9 +92,26 @@ def check_product_images(out: list[dict], cfg: dict) -> list[dict]:
     return result
 
 
+def backfill_humor_bodies() -> None:
+    """예전에 본문 없이 저장된 유머 글은 원글 본문만 다시 읽어서 채움 (전체 재수집 아님)."""
+    con = collector.db()
+    rows = con.execute("SELECT url, source FROM items WHERE category='유머' AND (summary IS NULL OR summary='')").fetchall()
+    n = 0
+    for r in rows:
+        sel, ref = collector.IMAGE_SELECTORS.get(r["source"], ("body", None))
+        _, text = collector.post_content(r["url"], sel, ref)
+        con.execute("UPDATE items SET summary=? WHERE url=?", (text or " ", r["url"]))
+        n += bool(text.strip())
+    con.commit()
+    con.close()
+    if rows:
+        print(f"  유머 본문 {n}/{len(rows)}개 채움")
+
+
 def export() -> None:
     cfg = collector.load_config()
     IMG.mkdir(parents=True, exist_ok=True)
+    backfill_humor_bodies()
     since = (datetime.now(collector.KST) - timedelta(days=cfg.get("days", 7))).isoformat()
     con = collector.db()
     rows = con.execute("SELECT * FROM items WHERE posted_at>=? ORDER BY score DESC", (since,)).fetchall()
@@ -119,7 +136,7 @@ def export() -> None:
             "views": r["views"], "likes": r["likes"], "comments": r["comments"], "score": r["score"],
             "posted_at": r["posted_at"],
             "heading": r["title"] if game else clean_heading(r["title"]),
-            "comment": default_comment(r["summary"]),
+            "comment": (r["summary"] or "").strip() if r["category"] == "유머" else default_comment(r["summary"]),
             "images": imgs,
             "summary": r["summary"],
         })
@@ -141,21 +158,12 @@ def export() -> None:
         written = llm_dedupe.write_comments(cat, conf.get("style", "block"), todo)
         for i, w in written.items():
             cache[todo[i]["url"]] = w
-    # 유머: 사진을 보고 2~3줄 코멘트 (본문이 없어서 짤만 덩그러니 남지 않게)
-    todo = [it for it in out if it["category"] == "유머" and it["url"] not in cache]
-    caps = llm_dedupe.humor_captions([
-        {"title": it["title"], "paths": [str(DOCS / p) for p in it["images"] if p.endswith((".jpg", ".png", ".webp"))]}
-        for it in todo])
-    for i, c in caps.items():
-        cache[todo[i]["url"]] = {"heading": "", "comment": c}
     for it in out:
         w = cache.get(it["url"])
-        if w and it["category"] == "유머":
-            it["comment"] = w["comment"]
-        elif w:
+        if w and it["category"] != "유머":
             it["heading"] = w["heading"] or it["heading"]
             it["comment"] = w["comment"]
-    keep_urls = {it["url"] for it in out}
+    keep_urls = {it["url"] for it in out if it["category"] != "유머"}
     cache = {u: w for u, w in cache.items() if u in keep_urls}
     cache_path.write_text(json.dumps(cache, ensure_ascii=False, indent=1), encoding="utf-8")
     for it in out:

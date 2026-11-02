@@ -132,14 +132,38 @@ def parse_list_time(text: str, title_attr: str | None = None) -> str:
     return now.isoformat()
 
 
-def content_images(url: str, selector: str, referer: str | None = None, limit: int = 8) -> list[str]:
+BODY_SKIP = ("- dc official App", "dc official App", "출처 :", "출처:", "[원본 보기]", "원본 보기")
+
+
+def body_text(box) -> str:
+    """원글 본문 글자만 (줄 단위). 앱 서명·빈 줄은 빼고, 자르지 않음."""
+    lines = []
+    for line in box.get_text("\n", strip=True).split("\n"):
+        line = line.strip()
+        if not line or any(line.startswith(k) for k in BODY_SKIP) or line.startswith("http"):
+            continue
+        if not lines or lines[-1] != line:
+            lines.append(line)
+    return "\n".join(lines)
+
+
+def post_content(url: str, selector: str, referer: str | None = None, limit: int = 8) -> tuple[list[str], str]:
+    """글 페이지에서 (짤 주소들, 본문 글)."""
     r = get(url, headers={"Referer": referer or url})
     if not r:
-        return []
+        return [], ""
     soup = BeautifulSoup(r.text, "html.parser")
     box = soup.select_one(selector)
     if not box:
-        return []
+        return [], ""
+    return _box_images(box, url, limit), body_text(box)
+
+
+def content_images(url: str, selector: str, referer: str | None = None, limit: int = 8) -> list[str]:
+    return post_content(url, selector, referer, limit)[0]
+
+
+def _box_images(box, url: str, limit: int) -> list[str]:
     out = []
     for img in box.select("img"):
         src = img.get("data-original") or img.get("data-src") or img.get("src") or ""
@@ -602,7 +626,7 @@ def main() -> None:
     log(f"[유머] 상위 {len(top)}개 글에서 짤 가져오는 중...")
     for h in top:
         sel, ref = IMAGE_SELECTORS.get(h["source"], ("body", None))
-        h["images"] = content_images(h["url"], sel, ref)
+        h["images"], h["summary"] = post_content(h["url"], sel, ref)
         if not h["images"]:
             continue  # 짤 없는 글은 제외
         upsert(con, h)
