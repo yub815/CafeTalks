@@ -212,7 +212,7 @@ def collect_ruliweb_list(url_tmpl: str, pages: int, category: str, source: str) 
             items.append({
                 "category": category, "source": source,
                 "url": urljoin("https://bbs.ruliweb.com", a.get("href", "").split("?")[0]),
-                "title": a.get_text(" ", strip=True),
+                "title": re.sub(r"^\d{1,2}\s+", "", a.get_text(" ", strip=True)),
                 "views": to_int(tr.select_one("td.hit").get_text()) if tr.select_one("td.hit") else 0,
                 "likes": to_int(tr.select_one("td.recomd").get_text()) if tr.select_one("td.recomd") else 0,
                 "comments": to_int(reply.get_text()) if reply else 0,

@@ -8,6 +8,7 @@ from __future__ import annotations
 import hashlib
 import io
 import json
+import re
 import sys
 from datetime import datetime, timedelta
 from pathlib import Path
@@ -113,7 +114,8 @@ def export() -> None:
         game = r["source"].startswith(("스팀", "itch"))
         out.append({
             "id": hashlib.sha1(r["url"].encode()).hexdigest()[:12],
-            "category": r["category"], "source": r["source"], "title": r["title"], "url": r["url"],
+            "category": r["category"], "source": r["source"], "url": r["url"],
+            "title": re.sub(r"^\d{1,2}\s+", "", r["title"]) if r["source"].startswith("루리웹") else r["title"],
             "views": r["views"], "likes": r["likes"], "comments": r["comments"], "score": r["score"],
             "posted_at": r["posted_at"],
             "heading": r["title"] if game else clean_heading(r["title"]),

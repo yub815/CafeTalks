@@ -178,12 +178,14 @@ function buildHumor(id){
   showPreview(title, body, it.images, [id]);
 }
 
-let LIST_Y = 0;
+let LIST_Y = 0, PENDING_IDS = [];
+// 미리보기만 보고 돌아오면 '사용함'으로 안 바뀜. 복사하거나 사진을 받을 때만 표시
+function markUsed(){ PENDING_IDS.forEach(i => USED.add(i)); save('wc_used', USED); }
 function backToList(){ renderList(); window.scrollTo(0, LIST_Y); }
 window.addEventListener('popstate', () => { if($('#post')) backToList(); });
 
 function showPreview(title, body, files, ids){
-  ids.forEach(i => USED.add(i)); save('wc_used', USED);
+  PENDING_IDS = ids;
   LIST_Y = window.scrollY;
   history.pushState({preview: true}, '');
   $('#main').innerHTML = `
@@ -217,6 +219,7 @@ async function copyPost(){
     const r = document.createRange(); r.selectNodeContents(el);
     const s = getSelection(); s.removeAllRanges(); s.addRange(r); document.execCommand('copy'); s.removeAllRanges();
   }
+  markUsed();
   flash('복사됐어요! 카페 본문에 Ctrl+V');
 }
 
@@ -231,10 +234,12 @@ async function copyTextOnly(){
       'text/html': new Blob([html], {type: 'text/html'}),
       'text/plain': new Blob([el.innerText], {type: 'text/plain'})})]);
   }catch(e){ await navigator.clipboard.writeText(el.innerText); }
+  markUsed();
   flash('글만 복사됐어요 (사진 ' + n + '장 자리 표시)');
 }
 
 async function downloadZip(files, title){
+  markUsed();
   flash('사진 모으는 중...');
   const zip = new JSZip();
   let n = 0;
