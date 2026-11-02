@@ -66,12 +66,12 @@ def check_product_images(out: list[dict], cfg: dict) -> list[dict]:
         cache = {}
     todo = [it for it in out if it["category"] in cats and it["url"] not in cache]
     for it in todo:
-        cands = list(it["images"])
-        for u in collector.article_images(it["url"]):
+        cands = []
+        for u in collector.article_images(it["url"]) + it["source_images"]:
             p = save_image(u)
             if p and p not in cands and not p.endswith((".gif", ".mp4")):
                 cands.append(p)
-        it["images"] = cands[:6]
+        it["images"] = cands[:6] or it["images"]
     for cat in cats:
         group = [it for it in todo if it["category"] == cat]
         picked = llm_dedupe.pick_product_images(cat, [
@@ -138,6 +138,7 @@ def export() -> None:
             "heading": r["title"] if game else clean_heading(r["title"]),
             "comment": (r["summary"] or "").strip() if r["category"] == "유머" else default_comment(r["summary"]),
             "images": imgs,
+            "source_images": json.loads(r["images"] or "[]")[:6],
             "summary": r["summary"],
         })
     con.close()
@@ -168,6 +169,7 @@ def export() -> None:
     cache_path.write_text(json.dumps(cache, ensure_ascii=False, indent=1), encoding="utf-8")
     for it in out:
         it.pop("summary", None)
+        it.pop("source_images", None)
     cats = {k: {"title": v.get("title", ""), "intro": v.get("intro", ""), "style": v.get("style", "block")}
             for k, v in cfg.get("categories", {}).items()}
     (DOCS / "data").mkdir(exist_ok=True)

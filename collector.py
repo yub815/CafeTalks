@@ -341,6 +341,12 @@ def og_image(url: str) -> str | None:
     return urljoin(url, tag["content"]) if tag and tag.get("content") else None
 
 
+def untumb(u: str) -> str | None:
+    v = re.sub(r"(_\d+)?_(thum|thumb|s)(?=\.(jpe?g|png|webp)$)", "", u, flags=re.I)
+    v = re.sub(r"/(thumb|thumbnail|thumbs)/", "/", v, flags=re.I)
+    return v if v != u else None
+
+
 def article_images(url: str, limit: int = 6) -> list[str]:
     """기사 본문 사진들 (대표 이미지 + 본문 img). 로고·아이콘은 뺌."""
     r = get(url)
@@ -349,8 +355,7 @@ def article_images(url: str, limit: int = 6) -> list[str]:
     soup = BeautifulSoup(r.text, "html.parser")
     found = []
     tag = soup.select_one('meta[property="og:image"], meta[name="og:image"], meta[name="twitter:image"]')
-    if tag and tag.get("content"):
-        found.append(urljoin(url, tag["content"]))
+    og = urljoin(url, tag["content"]) if tag and tag.get("content") else None
     body = soup.select_one("article, [itemprop=articleBody], #articleBody, #article-view-content-div, "
                            ".article_body, .article-body, #article_body, .news_body, #newsct_article, .view_con") or soup
     for img in body.select("img"):
@@ -363,6 +368,11 @@ def article_images(url: str, limit: int = 6) -> list[str]:
         except ValueError:
             pass
         found.append(urljoin(url, src))
+    # 대표 이미지(og)는 잘린 썸네일인 경우가 많아서 본문 사진 뒤에 둠
+    if og:
+        found.append(og)
+    # 썸네일 주소면 원본 주소도 시도 (예: ..._750_thum.jpg → ....jpg)
+    found = [v for u in found for v in (untumb(u), u) if v]
     out = []
     for u in found:
         if u not in out and not is_logo(u):
