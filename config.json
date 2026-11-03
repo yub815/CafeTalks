@@ -200,5 +200,6 @@
     "정사갤"
   ],
   "_humor_exclude_설명": "유머 글 제목(디시는 갤러리 말머리 포함)에 이 단어가 있으면 뺍니다. 필요하면 추가/삭제하세요.",
-  "humor_max_images": 2
+  "humor_max_images": 2,
+  "keep_weeks": 5
 }

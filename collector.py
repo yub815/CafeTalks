@@ -634,14 +634,15 @@ def collect_itch(cat: str, url: str, limit: int = 15) -> list[dict]:
 
 
 # ---------------------------------------------------------------- main
-def main() -> None:
+def main(humor_only: bool = False) -> None:
     cfg = load_config()
     days = cfg.get("days", 7)
     since = datetime.now(KST) - timedelta(days=days)
     con = db()
     total = 0
-    # 뉴스는 매번 일주일치를 새로 모으니, 아직 안 쓴 예전 뉴스 후보는 비우고 시작
-    con.execute("DELETE FROM items WHERE used=0 AND category != '유머'")
+    # 주차별로 지난 주 자료도 보여주니, 보관 기간(keep_weeks)보다 오래된 것만 지움
+    old = (datetime.now(KST) - timedelta(weeks=cfg.get("keep_weeks", 5) + 1)).isoformat()
+    con.execute("DELETE FROM items WHERE posted_at < ?", (old,))
     con.commit()
 
     # 1) 유머
@@ -692,6 +693,10 @@ def main() -> None:
         upsert(con, h)
         total += 1
     con.commit()
+    if humor_only:
+        log(f"\n유머만 갱신 완료! {total}개 저장됨")
+        con.close()
+        return
 
     # 2) 루리웹 게임 뉴스 (신작 게임 보강)
     for cat, conf in cfg.get("categories", {}).items():

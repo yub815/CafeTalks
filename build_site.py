@@ -29,6 +29,20 @@ except ImportError:  # Pillow가 없으면 원본 그대로 저장
     Image = None
 
 
+def this_monday() -> datetime:
+    now = datetime.now(collector.KST)
+    return (now - timedelta(days=now.weekday())).replace(hour=0, minute=0, second=0, microsecond=0)
+
+
+def week_of(posted_at: str) -> str:
+    """그 글이 속한 주의 월요일 날짜 (YYYY-MM-DD). 주차 묶음 기준."""
+    d = datetime.fromisoformat(posted_at)
+    if d.tzinfo is None:
+        d = d.replace(tzinfo=collector.KST)
+    d = d.astimezone(collector.KST)
+    return (d - timedelta(days=d.weekday())).date().isoformat()
+
+
 def save_image(url: str) -> str | None:
     name = hashlib.sha1(url.encode()).hexdigest()[:16]
     for ext in (".jpg", ".png", ".gif", ".webp", ".mp4"):
@@ -138,7 +152,7 @@ def export() -> None:
     cfg = collector.load_config()
     IMG.mkdir(parents=True, exist_ok=True)
     backfill_humor_bodies()
-    since = (datetime.now(collector.KST) - timedelta(days=cfg.get("days", 7))).isoformat()
+    since = (this_monday() - timedelta(weeks=cfg.get("keep_weeks", 5) - 1)).isoformat()
     con = collector.db()
     rows = con.execute("SELECT * FROM items WHERE posted_at>=? ORDER BY score DESC", (since,)).fetchall()
     bad = cfg.get("humor_exclude_words", [])
@@ -161,6 +175,7 @@ def export() -> None:
             "title": re.sub(r"^\d{1,2}\s+", "", r["title"]) if r["source"].startswith("루리웹") else r["title"],
             "views": r["views"], "likes": r["likes"], "comments": r["comments"], "score": r["score"],
             "posted_at": r["posted_at"],
+            "week": week_of(r["posted_at"]),
             "heading": r["title"] if game else clean_heading(r["title"]),
             "comment": (r["summary"] or "").strip() if r["category"] == "유머" else default_comment(r["summary"]),
             "images": imgs,
@@ -171,7 +186,8 @@ def export() -> None:
     # Claude API로 같은 소식 묶기 (ANTHROPIC_API_KEY가 있을 때만)
     merged = []
     for cat in list(cfg.get("categories", {}).keys()) + ["유머"]:
-        merged += llm_dedupe.dedupe(cat, [it for it in out if it["category"] == cat])
+        for wk in sorted({it["week"] for it in out if it["category"] == cat}):
+            merged += llm_dedupe.dedupe(cat, [it for it in out if it["category"] == cat and it["week"] == wk])
     out = merged
     out = check_product_images(out, cfg)
     out = filter_humor(out, cfg)
@@ -213,6 +229,8 @@ def export() -> None:
 
 
 if __name__ == "__main__":
-    if "--export-only" not in sys.argv:
+    if "--humor-only" in sys.argv:
+        collector.main(humor_only=True)
+    elif "--export-only" not in sys.argv:
         collector.main()
     export()
