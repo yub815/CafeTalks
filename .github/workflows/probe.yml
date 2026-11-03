@@ -5,10 +5,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - run: |
-          echo "== search"; curl -s -m 30 -G "https://api.microlink.io/" --data-urlencode "url=https://store.steampowered.com/search/?term=liars bar&l=koreana&cc=KR" \
-            --data-urlencode "data.games.selectorAll=#search_resultsRows > a" --data-urlencode "data.games.attr.url.attr=href" \
-            --data-urlencode "data.games.attr.title.selector=.title" --data-urlencode "data.games.attr.img.selector=img" --data-urlencode "data.games.attr.img.attr=src" --data-urlencode "meta=false" | cut -c1-900
-          echo; echo "== app"; curl -s -m 30 -G "https://api.microlink.io/" --data-urlencode "url=https://store.steampowered.com/app/3097560/?l=koreana" \
-            --data-urlencode "data.desc.selector=.game_description_snippet" --data-urlencode "data.name.selector=#appHubAppName" \
-            --data-urlencode "data.shots.selectorAll=.highlight_screenshot_link" --data-urlencode "data.shots.attr=href" --data-urlencode "meta=false" | cut -c1-1200
-          echo; echo "== ratelimit"; curl -s -m 20 -D - -o /dev/null "https://api.microlink.io/?url=https://neal.fun" | grep -i rate-limit
+          O="Origin: https://yub815.github.io"
+          T='https://store.steampowered.com/api/storesearch/?term=%EB%9D%BC%EC%9D%B4%EC%96%B4%EC%8A%A4%20%EB%B0%94&l=koreana&cc=KR'
+          for P in "https://api.allorigins.win/raw?url=" "https://corsproxy.io/?url=" "https://api.codetabs.com/v1/proxy/?quest=" "https://cors.eu.org/"; do
+            echo "== $P"; curl -s -m 20 -D - -H "$O" "$P$(python3 -c "import urllib.parse,sys;print(urllib.parse.quote(sys.argv[1],safe='') if 'eu.org' not in sys.argv[2] else sys.argv[1])" "$T" "$P")" | grep -iE "^HTTP|access-control-allow-origin|^\{" | cut -c1-250
+          done
+          echo "== appdetails via allorigins"; curl -s -m 20 "https://api.allorigins.win/raw?url=$(python3 -c "import urllib.parse;print(urllib.parse.quote('https://store.steampowered.com/api/appdetails?appids=3097560&l=koreana&cc=kr',safe=''))")" | cut -c1-200
