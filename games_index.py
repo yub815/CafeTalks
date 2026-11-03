@@ -86,7 +86,7 @@ def itch_games() -> list[dict]:
     return out
 
 
-def build() -> None:
+def build(max_details: int = MAX_DETAILS) -> None:
     try:
         cache = json.loads(CACHE.read_text(encoding="utf-8"))
     except (FileNotFoundError, json.JSONDecodeError):
@@ -99,7 +99,7 @@ def build() -> None:
         g = cache.get(appid, {})
         g.update({"en": en or g.get("en", ""), "rank": rank})
         cache[appid] = g
-        if fetched >= MAX_DETAILS or (g.get("t") and now - g["t"] < REFRESH_DAYS * 86400):
+        if fetched >= max_details or (g.get("t") and now - g["t"] < REFRESH_DAYS * 86400):
             continue
         info = steam_full(appid)
         if info is None:          # 접속 실패·요청 제한 → 다음에 다시
