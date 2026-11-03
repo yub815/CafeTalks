@@ -229,8 +229,17 @@ def export() -> None:
 
 
 if __name__ == "__main__":
+    if "--games-only" in sys.argv:  # 게임 검색 목록만 채우기
+        import games_index
+        games_index.build()
+        sys.exit(0)
     if "--humor-only" in sys.argv:
         collector.main(humor_only=True)
     elif "--export-only" not in sys.argv:
         collector.main()
+        try:
+            import games_index
+            games_index.build()
+        except Exception as e:  # 검색 목록이 실패해도 나머지는 계속
+            print(f"  ! 게임 검색 목록 만들기 실패: {e}")
     export()

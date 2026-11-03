@@ -37,6 +37,10 @@ textarea{min-height:100px}
 .thumbs.big input:checked+img,.thumbs.big input:checked+video{border-color:var(--accent);opacity:1}
 .thumbs.big label::after{content:"";position:absolute;right:8px;top:8px;width:22px;height:22px;border-radius:50%;background:rgba(0,0,0,.6);border:2px solid #fff}
 .thumbs.big label:has(input:checked)::after{content:"✓";background:var(--accent);color:#000;font-weight:700;text-align:center;line-height:22px}
+.addbox{background:var(--panel);border:1px dashed var(--line);border-radius:12px;padding:12px;margin-bottom:16px}
+.addbox #manual{margin-top:10px;display:grid;gap:8px}
+.gres{display:flex;gap:10px;align-items:center;padding:6px 0;border-bottom:1px solid var(--line)}
+.gres img{width:120px;height:56px;object-fit:cover;border-radius:6px;background:#000}
 .empty{color:var(--muted);padding:40px;text-align:center}
 .note{background:#2a2410;border:1px solid #5a4a14;color:#ffd77a;border-radius:8px;padding:10px 14px;margin:10px 0;font-size:14px}
 .preview{background:#000;border:1px solid var(--line);border-radius:12px;padding:24px;max-width:860px}
@@ -58,6 +62,10 @@ let DATA = null, CAT = null, SHOW_USED = false, WEEK = null;
 function load(k){ try{ return new Set(JSON.parse(localStorage.getItem(k) || '[]')); }catch(e){ return new Set(); } }
 function save(k, set){ try{ localStorage.setItem(k, JSON.stringify([...set])); }catch(e){} }
 const USED = load('wc_used'), HIDDEN = load('wc_hidden');
+// 직접 추가한 게임 (이 브라우저에 저장)
+let CUSTOM = (() => { try{ return JSON.parse(localStorage.getItem('wc_custom') || '[]'); }catch(e){ return []; } })();
+function saveCustom(){ try{ localStorage.setItem('wc_custom', JSON.stringify(CUSTOM)); }catch(e){ alertMsg('브라우저 저장 공간이 부족해요. 사진 수를 줄여 주세요.'); } }
+const allItems = () => CUSTOM.concat(DATA.items);
 
 function abs(p){ return new URL(p, location.href).href; }
 function weekLabel(d){
@@ -88,10 +96,11 @@ async function init(){
 }
 
 function rows(){
-  return DATA.items.filter(it => it.category === CAT && (it.week || THIS_WEEK) === WEEK && !HIDDEN.has(it.id) && (SHOW_USED || !USED.has(it.id)));
+  return allItems().filter(it => it.category === CAT && (it.week || THIS_WEEK) === WEEK && !HIDDEN.has(it.id) && (SHOW_USED || !USED.has(it.id)));
 }
 
 function media(src, cls=''){
+  if(!src) return `<div class="meta" style="width:180px;height:130px;display:flex;align-items:center;justify-content:center;border:1px dashed var(--line);border-radius:8px">사진 없음</div>`;
   return src.endsWith('.mp4') ? `<video src="${esc(src)}" muted class="${cls}"></video>` : `<img loading="lazy" src="${esc(src)}" class="${cls}">`;
 }
 
@@ -106,9 +115,17 @@ function renderList(){
   if(roundup) h += `<button class="b" id="buildTop">체크한 것으로 글 만들기</button>`;
   h += `</div>`;
   if(DATA.categories[CAT] && DATA.categories[CAT].style === 'numbered'){
-    h += `<div class="bar"><input type="text" id="gameReq" placeholder="추가하고 싶은 게임 이름 (스팀 기준)" style="max-width:340px">
-      <button class="g" id="gameReqBtn">게임 요청</button>
-      <span class="meta">GitHub 창에서 <b>Create</b>를 누르면 1~3분 뒤 이번 주 맨 위에 들어가요</span></div>`;
+    h += `<div class="addbox">
+      <div class="bar" style="margin:0"><input type="text" id="gq" placeholder="게임 검색 (한글·영어 이름, 스팀 인기 게임 + itch.io 웹게임)" style="max-width:420px" autocomplete="off">
+        <button class="g" id="manualBtn">목록에 없으면 직접 추가</button></div>
+      <div id="gres"></div>
+      <div id="manual" style="display:none">
+        <input type="text" id="mName" placeholder="게임 이름"> <input type="text" id="mUrl" placeholder="링크 (웹게임 주소, 스팀 주소 등)">
+        <textarea id="mDesc" placeholder="설명 (코멘트)"></textarea>
+        <div class="meta">사진: <input type="file" id="mFile" accept="image/*" multiple> 또는 스크린샷을 복사해서 여기서 Ctrl+V</div>
+        <div class="thumbs" id="mThumbs"></div>
+        <button class="b" id="mAdd">이 게임 추가</button>
+      </div></div>`;
   }
   if(!list.length) h += `<div class="empty">${WEEK === THIS_WEEK ? '이번 주' : weekName(WEEK)} 후보가 아직 없어요.</div>`;
   for(const it of list){
@@ -121,7 +138,7 @@ function renderList(){
           ${it.views ? ' · 조회 ' + fmt(it.views) : ''}${it.likes ? ' · 추천 ' + fmt(it.likes) : ''}${it.comments ? ' · 댓글 ' + fmt(it.comments) : ''}
           · <a href="${esc(it.url)}" target="_blank" rel="noopener">원본</a>
           ${used ? ' · <b style="color:var(--warn)">사용함</b>' : ''}
-          · <button class="linkbtn" data-hide="${it.id}">숨기기</button></div>
+          · ${it.custom ? `<button class="linkbtn" data-del="${it.id}">삭제</button>` : `<button class="linkbtn" data-hide="${it.id}">숨기기</button>`}</div>
         <div class="title">${esc(it.title)}</div>`;
     if(roundup){
       h += `<input type="text" id="h${it.id}" value="${esc(it.heading)}" placeholder="제목줄">
@@ -142,18 +159,8 @@ function renderList(){
   $('#main').innerHTML = h;
   window.scrollTo(0, 0);
   $('#toggleUsed').onclick = () => { SHOW_USED = !SHOW_USED; renderList(); };
-  const gr = $('#gameReqBtn');
-  if(gr){
-    const go = () => {
-      const name = $('#gameReq').value.trim();
-      if(!name) return;
-      const owner = location.hostname.split('.')[0], repo = location.pathname.split('/')[1] || 'CafeTalks';
-      const body = '사이트에서 보낸 게임 요청이에요. 아래 Create를 누르면 스팀에서 찾아서 게임 추천에 넣어요.';
-      window.open(`https://github.com/${owner}/${repo}/issues/new?title=${encodeURIComponent('게임 요청: ' + name)}&body=${encodeURIComponent(body)}`, '_blank');
-    };
-    gr.onclick = go;
-    $('#gameReq').onkeydown = e => { if(e.key === 'Enter') go(); };
-  }
+  if($('#gq')) setupGameAdd();
+  document.querySelectorAll('[data-del]').forEach(b => b.onclick = () => { CUSTOM = CUSTOM.filter(x => x.id !== b.dataset.del); saveCustom(); renderList(); });
   document.querySelectorAll('[data-week]').forEach(b => b.onclick = () => { WEEK = b.dataset.week; renderList(); });
   document.querySelectorAll('.pick').forEach(c => c.onchange = () => c.closest('.card').classList.toggle('sel', c.checked));
   document.querySelectorAll('.card.pickable').forEach(card => card.addEventListener('click', e => {
@@ -166,7 +173,7 @@ function renderList(){
   ['#buildTop', '#buildBottom'].forEach(s => { const b = $(s); if(b) b.onclick = buildRoundup; });
 }
 
-const byId = id => DATA.items.find(x => x.id === id);
+const byId = id => allItems().find(x => x.id === id);
 const linesHtml = t => (t || '').split('\n').map(l => `<p>${l.trim() ? esc(l) : '&nbsp;'}</p>`).join('');
 function imgTag(src){
   if(src.endsWith('.mp4')) return `<p style="text-align:center;color:#999">[영상 첨부: 사진 받기 파일에 포함]</p>`;
@@ -266,14 +273,62 @@ async function copyTextOnly(){
   flash('글만 복사됐어요 (사진 ' + n + '장 자리 표시)');
 }
 
+let GAMES = null;
+const norm = t => (t || '').toLowerCase().replace(/[\s:'’\-_.!,·]/g, '');
+function addCustom(g){
+  CUSTOM.unshift({id: 'c' + Date.now(), custom: true, category: CAT, week: WEEK, source: '직접 추가 · ' + (g.src || '직접 입력'),
+    title: g.ko || g.en, heading: g.ko || g.en, comment: g.desc || '', url: g.url || '', images: g.images || [],
+    posted_at: new Date().toISOString(), views: 0, likes: 0, comments: 0});
+  saveCustom(); renderList();
+}
+async function setupGameAdd(){
+  const box = $('#gres');
+  $('#manualBtn').onclick = () => { const m = $('#manual'); m.style.display = m.style.display === 'none' ? 'block' : 'none'; };
+  let shots = [];
+  const addShot = file => new Promise(res => {
+    const img = new Image();
+    img.onload = () => { const c = document.createElement('canvas'); const w = Math.min(900, img.width);
+      c.width = w; c.height = Math.round(img.height * w / img.width); c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+      shots.push(c.toDataURL('image/jpeg', 0.82)); $('#mThumbs').innerHTML = shots.map(u => `<img src="${u}">`).join(''); res(); };
+    img.src = URL.createObjectURL(file);
+  });
+  $('#mFile').onchange = async e => { for(const f of e.target.files) await addShot(f); };
+  $('#manual').onpaste = async e => { for(const it of e.clipboardData.items) if(it.type.startsWith('image/')) await addShot(it.getAsFile()); };
+  $('#mAdd').onclick = () => {
+    const name = $('#mName').value.trim(); if(!name){ $('#mName').focus(); return; }
+    addCustom({ko: name, url: $('#mUrl').value.trim(), desc: $('#mDesc').value.trim(), images: shots, src: '직접 입력'});
+  };
+  const q = $('#gq');
+  q.oninput = async () => {
+    const t = norm(q.value);
+    if(t.length < 1){ box.innerHTML = ''; return; }
+    if(!GAMES){ box.innerHTML = '<div class="meta">목록 불러오는 중...</div>';
+      try{ GAMES = await (await fetch('data/games.json?t=' + DATA.updated)).json(); }catch(e){ GAMES = []; } }
+    const hits = [];
+    GAMES.forEach((g, i) => { const k = norm(g.ko), e = norm(g.en);
+      let r = (k === t || e === t) ? 0 : (k.startsWith(t) || e.startsWith(t)) ? 1 : (k.includes(t) || e.includes(t)) ? 2 : -1;
+      if(r >= 0) hits.push([r, i, g]); });
+    hits.sort((a, b) => a[0] - b[0] || a[1] - b[1]);
+    box.innerHTML = hits.length ? hits.slice(0, 8).map(([, i, g]) => `<div class="gres">
+        <img src="${esc(g.images[0] || '')}" loading="lazy"><div style="flex:1"><b>${esc(g.ko || g.en)}</b>${g.ko && g.en && g.ko !== g.en ? ` <span class="meta">${esc(g.en)}</span>` : ''}
+        <div class="meta">${esc(g.src)}${g.genres && g.genres.length ? ' · ' + esc(g.genres.join(', ')) : ''}</div></div>
+        <button class="b" data-gi="${i}">추가</button></div>`).join('')
+      : '<div class="meta">목록에 없어요. 웹게임이나 덜 알려진 게임은 "목록에 없으면 직접 추가"로 넣어 주세요.</div>';
+    box.querySelectorAll('[data-gi]').forEach(b => b.onclick = () => { addCustom(GAMES[+b.dataset.gi]); });
+  };
+}
+
 async function downloadZip(files, title){
   markUsed();
   flash('사진 모으는 중...');
   const zip = new JSZip();
   let n = 0;
   for(const f of files){
-    const r = await fetch(f); if(!r.ok) continue;
-    n++; zip.file(String(n).padStart(2, '0') + f.slice(f.lastIndexOf('.')), await r.blob());
+    try{
+      const r = await fetch(f); if(!r.ok) continue;
+      const b = await r.blob(); const ext = ({'image/png': '.png', 'image/gif': '.gif', 'image/webp': '.webp', 'video/mp4': '.mp4'})[b.type] || '.jpg';
+      n++; zip.file(String(n).padStart(2, '0') + ext, b);
+    }catch(e){ /* 다른 사이트 사진은 막혀 있으면 건너뜀 */ }
   }
   const blob = await zip.generateAsync({type: 'blob'});
   const a = document.createElement('a');
