@@ -5,10 +5,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - run: |
-          O="Origin: https://yub815.github.io"
-          echo "== cheapshark"; curl -s -m 15 -D - -H "$O" "https://www.cheapshark.com/api/1.0/games?title=balatro&limit=3" | grep -iE "access-control|^\[" | cut -c1-400
-          echo "== microlink steam"; curl -s -m 25 -D - -H "$O" "https://api.microlink.io/?url=https%3A%2F%2Fstore.steampowered.com%2Fapp%2F2379780%2F" | grep -iE "access-control|^\{" | cut -c1-700
-          echo "== microlink web"; curl -s -m 25 -H "$O" "https://api.microlink.io/?url=https%3A%2F%2Fneal.fun%2Finfinite-craft%2F&screenshot=true" | cut -c1-900
-          echo "== steam search cors"; curl -s -m 15 -D - -H "$O" "https://store.steampowered.com/api/storesearch/?term=balatro&l=koreana&cc=KR" | grep -iE "access-control|^\{" | cut -c1-300
-          echo "== itch cors"; curl -s -m 15 -D - -H "$O" -o /dev/null "https://itch.io/search?q=balatro" | grep -i access-control
-          echo "== wiki"; curl -s -m 15 -D - -H "$O" "https://ko.wikipedia.org/w/api.php?action=opensearch&search=%EB%B0%9C%EB%9D%BC%ED%8A%B8%EB%A1%9C&origin=*" | grep -iE "access-control|^\[" | cut -c1-300
+          echo "== search"; curl -s -m 30 -G "https://api.microlink.io/" --data-urlencode "url=https://store.steampowered.com/search/?term=liars bar&l=koreana&cc=KR" \
+            --data-urlencode "data.games.selectorAll=#search_resultsRows > a" --data-urlencode "data.games.attr.url.attr=href" \
+            --data-urlencode "data.games.attr.title.selector=.title" --data-urlencode "data.games.attr.img.selector=img" --data-urlencode "data.games.attr.img.attr=src" --data-urlencode "meta=false" | cut -c1-900
+          echo; echo "== app"; curl -s -m 30 -G "https://api.microlink.io/" --data-urlencode "url=https://store.steampowered.com/app/3097560/?l=koreana" \
+            --data-urlencode "data.desc.selector=.game_description_snippet" --data-urlencode "data.name.selector=#appHubAppName" \
+            --data-urlencode "data.shots.selectorAll=.highlight_screenshot_link" --data-urlencode "data.shots.attr=href" --data-urlencode "meta=false" | cut -c1-1200
+          echo; echo "== ratelimit"; curl -s -m 20 -D - -o /dev/null "https://api.microlink.io/?url=https://neal.fun" | grep -i rate-limit
