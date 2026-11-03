@@ -1,0 +1,14 @@
+name: probe
+on: workflow_dispatch
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          O="Origin: https://yub815.github.io"
+          echo "== cheapshark"; curl -s -m 15 -D - -H "$O" "https://www.cheapshark.com/api/1.0/games?title=balatro&limit=3" | grep -iE "access-control|^\[" | cut -c1-400
+          echo "== microlink steam"; curl -s -m 25 -D - -H "$O" "https://api.microlink.io/?url=https%3A%2F%2Fstore.steampowered.com%2Fapp%2F2379780%2F" | grep -iE "access-control|^\{" | cut -c1-700
+          echo "== microlink web"; curl -s -m 25 -H "$O" "https://api.microlink.io/?url=https%3A%2F%2Fneal.fun%2Finfinite-craft%2F&screenshot=true" | cut -c1-900
+          echo "== steam search cors"; curl -s -m 15 -D - -H "$O" "https://store.steampowered.com/api/storesearch/?term=balatro&l=koreana&cc=KR" | grep -iE "access-control|^\{" | cut -c1-300
+          echo "== itch cors"; curl -s -m 15 -D - -H "$O" -o /dev/null "https://itch.io/search?q=balatro" | grep -i access-control
+          echo "== wiki"; curl -s -m 15 -D - -H "$O" "https://ko.wikipedia.org/w/api.php?action=opensearch&search=%EB%B0%9C%EB%9D%BC%ED%8A%B8%EB%A1%9C&origin=*" | grep -iE "access-control|^\[" | cut -c1-300
