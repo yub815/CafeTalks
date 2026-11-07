@@ -229,6 +229,9 @@ def export() -> None:
     trimmed = []
     for it in out:
         if it["category"] == "유머":
+            # 사진·본문 조건에 안 맞는 건 미리 빼서, 남는 150개가 쓸 수 있는 짤이 되게 함
+            if len(it["images"]) > cfg.get("humor_max_images", 2) or len(it.get("comment") or "") > 200:
+                continue
             seen_wk[it["week"]] = seen_wk.get(it["week"], 0) + 1
             if seen_wk[it["week"]] > per_week:
                 continue
