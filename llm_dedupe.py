@@ -63,7 +63,7 @@ def find_duplicates(category: str, items: list[dict]) -> list[list[int]]:
         print("  ! Claude API 사용량 한도에 걸렸어요. 중복 검사를 건너뜁니다.")
         return []
     except anthropic.APIStatusError as e:
-        print(f"  ! Claude API 오류({e.status_code}). 중복 검사를 건너뜁니다.")
+        print(f"  ! Claude API 오류({e.status_code}: {str(e.message)[:200]}). 중복 검사를 건너뜁니다.")
         return []
     except anthropic.APIConnectionError:
         print("  ! Claude API 접속 실패. 중복 검사를 건너뜁니다.")
@@ -177,7 +177,7 @@ def _write_batch(category: str, style: str, items: list[dict]) -> dict[int, dict
             messages=[{"role": "user", "content": prompt}],
         )
     except anthropic.APIStatusError as e:
-        print(f"  ! Claude API 오류({e.status_code}). 코멘트는 기사 요약으로 둡니다.")
+        print(f"  ! Claude API 오류({e.status_code}: {str(e.message)[:200]}). 코멘트는 기사 요약으로 둡니다.")
         return {}
     except anthropic.APIConnectionError:
         print("  ! Claude API 접속 실패. 코멘트는 기사 요약으로 둡니다.")
@@ -273,7 +273,7 @@ def _pick_batch(category: str, items: list[dict]) -> dict[int, list[int]]:
             messages=[{"role": "user", "content": content}],
         )
     except anthropic.APIStatusError as e:
-        print(f"  ! Claude API 오류({e.status_code}). 사진 확인을 건너뜁니다.")
+        print(f"  ! Claude API 오류({e.status_code}: {str(e.message)[:200]}). 사진 확인을 건너뜁니다.")
         return {}
     except anthropic.APIConnectionError:
         print("  ! Claude API 접속 실패. 사진 확인을 건너뜁니다.")
@@ -335,7 +335,7 @@ def humor_filter(items: list[dict]) -> dict[int, bool]:
             messages=[{"role": "user", "content": prompt}],
         )
     except anthropic.APIStatusError as e:
-        print(f"  ! Claude API 오류({e.status_code}). 유머 거르기를 건너뜁니다.")
+        print(f"  ! Claude API 오류({e.status_code}: {str(e.message)[:200]}). 유머 거르기를 건너뜁니다.")
         return {}
     except anthropic.APIConnectionError:
         print("  ! Claude API 접속 실패. 유머 거르기를 건너뜁니다.")
