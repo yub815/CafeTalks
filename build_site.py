@@ -223,6 +223,17 @@ def export() -> None:
             "summary": r["summary"],
         })
     con.close()
+    # 유머는 3시간마다 쌓여서 많으니, 주마다 점수 높은 것만 남김 (rows가 점수 높은 순)
+    per_week = cfg.get("humor_per_week", 150)
+    seen_wk: dict[str, int] = {}
+    trimmed = []
+    for it in out:
+        if it["category"] == "유머":
+            seen_wk[it["week"]] = seen_wk.get(it["week"], 0) + 1
+            if seen_wk[it["week"]] > per_week:
+                continue
+        trimmed.append(it)
+    out = trimmed
     # 규칙으로 먼저 같은 소식 묶기 (같은 주 안에서, 날마다 따로 모인 기사끼리도) → Claude가 안 될 때도 중복이 덜 남게
     out = rule_dedupe(out)
     # Claude API로 같은 소식 묶기 (ANTHROPIC_API_KEY가 있을 때만)

@@ -82,11 +82,16 @@ def find_duplicates(category: str, items: list[dict]) -> list[list[int]]:
         groups = json.loads(text).get("groups", [])
     except (json.JSONDecodeError, AttributeError):
         return []
-    valid = []
+    valid, used = [], set()
     for g in groups:
-        g = sorted({i for i in g if isinstance(i, int) and 0 <= i < len(items)})
-        if len(g) >= 2:
+        g = sorted({i for i in g if isinstance(i, int) and 0 <= i < len(items)} - used)
+        if 2 <= len(g) <= 6:  # 너무 큰 묶음은 잘못 묶은 것으로 봄
             valid.append(g)
+            used.update(g)
+    dropped = sum(len(g) - 1 for g in valid)
+    if dropped > max(3, len(items) * 0.3):  # 30% 넘게 지우라고 하면 믿지 않음
+        print(f"  ! [{category}] Claude 중복 결과가 이상해서({dropped}/{len(items)}) 쓰지 않아요")
+        return []
     find_duplicates.failed = False
     return valid
 
