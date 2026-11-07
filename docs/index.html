@@ -186,7 +186,7 @@ function buildRoundup(){
   const conf = DATA.categories[CAT];
   const [m, w] = weekLabel(new Date(WEEK + 'T12:00:00'));
   const title = conf.title.replace('{month}', m).replace('{week}', w);
-  const parts = [linesHtml(conf.intro), '<p>&nbsp;</p>'];
+  const parts = conf.intro ? [linesHtml(conf.intro), '<p>&nbsp;</p>'] : [];
   const files = [];
   ids.forEach((id, k) => {
     const it = byId(id);

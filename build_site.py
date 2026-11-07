@@ -148,6 +148,43 @@ def filter_humor(out: list[dict], cfg: dict) -> list[dict]:
     return result
 
 
+def same_item(a: dict, b: dict) -> bool:
+    """같은 제품 소식인지 (브랜드만 같고 제품이 다른 건 따로 둠)."""
+    ia, ib = (a["images"] or [None])[0], (b["images"] or [None])[0]
+    if ia and ia == ib:
+        return True
+    qa = {q.replace(" ", "") for q in collector.quoted(a["title"])}
+    qb = {q.replace(" ", "") for q in collector.quoted(b["title"])}
+    if any(len(x) >= 3 and len(y) >= 3 and (x in y or y in x) for x in qa for y in qb):
+        return True
+    ta, tb = collector.tokens(a["title"]), collector.tokens(b["title"])
+    if not ta or not tb:
+        return False
+    # 회사 이름은 빼고 겹치는 단어로 판단 (같은 회사의 다른 제품은 따로 둠)
+    brand = {w.lower() for w in collector.brands(a["title"]) | collector.brands(b["title"])}
+    common = {w for w in ta & tb if w not in brand and not any(w in x or x in w for x in brand)}
+    long_ = [w for w in common if len(w) >= 3]
+    if len(long_) >= 2 or (long_ and len(common) >= 2):
+        return True
+    return len(common) / min(len(ta), len(tb)) >= 0.6
+
+
+def rule_dedupe(out: list[dict]) -> list[dict]:
+    kept: list[dict] = []
+    dropped = 0
+    for it in out:
+        if it["category"] == "유머" or it["source"].startswith(("스팀", "itch")):
+            kept.append(it)
+            continue
+        if any(k["category"] == it["category"] and k["week"] == it["week"] and same_item(it, k) for k in kept):
+            dropped += 1
+            continue
+        kept.append(it)
+    if dropped:
+        print(f"  규칙으로 중복 {dropped}개를 묶었어요")
+    return kept
+
+
 def export() -> None:
     cfg = collector.load_config()
     IMG.mkdir(parents=True, exist_ok=True)
@@ -160,6 +197,9 @@ def export() -> None:
     for r in rows:
         if r["category"] == "유머" and collector.is_controversial(r["title"], bad):
             continue
+        cat_conf = cfg.get("categories", {}).get(r["category"], {})
+        if any(w in r["title"] for w in cat_conf.get("exclude_words", [])):
+            continue  # 나중에 추가한 제외 단어도 이미 모은 자료에 바로 적용
         imgs = []
         for u in json.loads(r["images"] or "[]")[:6]:
             p = save_image(u)
@@ -183,6 +223,8 @@ def export() -> None:
             "summary": r["summary"],
         })
     con.close()
+    # 규칙으로 먼저 같은 소식 묶기 (같은 주 안에서, 날마다 따로 모인 기사끼리도) → Claude가 안 될 때도 중복이 덜 남게
+    out = rule_dedupe(out)
     # Claude API로 같은 소식 묶기 (ANTHROPIC_API_KEY가 있을 때만)
     merged = []
     for cat in list(cfg.get("categories", {}).keys()) + ["유머"]:
