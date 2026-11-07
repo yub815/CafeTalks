@@ -205,7 +205,7 @@ def collect_dcinside(pages: int) -> list[dict]:
             date = tr.select_one("td.gall_date")
             items.append({
                 "category": "유머", "source": "디시 실베",
-                "url": urljoin("https://gall.dcinside.com", a.get("href", "")),
+                "url": re.sub(r"&page=\d+", "", urljoin("https://gall.dcinside.com", a.get("href", ""))),
                 "title": re.sub(r"^\[[^\]]+\]\s*", "", title),
                 "tag": (re.match(r"^\[([^\]]+)\]", title) or [None, ""])[1],  # [싱갤] 같은 갤러리 말머리
                 "views": to_int(tr.select_one("td.gall_count").get_text()),
