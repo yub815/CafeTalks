@@ -4,10 +4,13 @@ GitHub 저장소 Secrets에 ANTHROPIC_API_KEY 가 있으면 동작하고, 없으
 """
 from __future__ import annotations
 
+import hashlib
 import json
 import os
+from pathlib import Path
 
-MODEL = "claude-opus-5-5"
+MODEL = "claude-haiku-5-5"   # 비용 때문에 Haiku (Opus의 약 1/40 가격). 결과가 아쉬우면 claude-sonnet-5-5로
+CACHE = Path(__file__).resolve().parent / "data" / "dedupe_cache.json"
 
 SCHEMA = {
     "type": "object",
@@ -32,6 +35,7 @@ GUIDE = {
 
 def find_duplicates(category: str, items: list[dict]) -> list[list[int]]:
     """items: [{"title":..., "summary":...}] → 같은 소식 번호 묶음 리스트."""
+    find_duplicates.failed = True  # 끝까지 성공하면 False로 바꿈 (실패한 결과는 저장하지 않게)
     if len(items) < 2 or not os.environ.get("ANTHROPIC_API_KEY"):
         return []
     import anthropic
@@ -48,11 +52,9 @@ def find_duplicates(category: str, items: list[dict]) -> list[list[int]]:
     )
     client = anthropic.Anthropic()
     try:
-        response = client.beta.messages.create(
+        response = client.messages.create(
             model=MODEL,
             max_tokens=16000,
-            betas=["server-side-fallback-2026-07-01"],
-            fallbacks="default",
             output_config={"effort": "low", "format": {"type": "json_schema", "schema": SCHEMA}},
             messages=[{"role": "user", "content": prompt}],
         )
@@ -81,12 +83,28 @@ def find_duplicates(category: str, items: list[dict]) -> list[list[int]]:
         g = sorted({i for i in g if isinstance(i, int) and 0 <= i < len(items)})
         if len(g) >= 2:
             valid.append(g)
+    find_duplicates.failed = False
     return valid
 
 
 def dedupe(category: str, items: list[dict]) -> list[dict]:
     """같은 소식 묶음에서 점수가 가장 높은(목록에서 먼저 나온) 것 하나만 남김."""
-    groups = find_duplicates(category, items)
+    # 지난번과 같은 목록이면 다시 묻지 않음 (3시간마다 갱신할 때 비용 절약)
+    key = hashlib.sha1((category + "\n" + "\n".join(sorted(it["url"] for it in items))).encode()).hexdigest()
+    try:
+        cache = json.loads(CACHE.read_text(encoding="utf-8"))
+    except (FileNotFoundError, json.JSONDecodeError):
+        cache = {}
+    if key in cache:
+        pos = {it["url"]: i for i, it in enumerate(items)}
+        groups = [[pos[u] for u in g if u in pos] for g in cache[key]]
+        groups = [sorted(g) for g in groups if len(g) > 1]
+    else:
+        groups = find_duplicates(category, items) if len(items) > 1 else []
+        if len(items) > 1 and not getattr(find_duplicates, "failed", True):
+            cache[key] = [[items[i]["url"] for i in g] for g in groups]
+            CACHE.parent.mkdir(exist_ok=True)
+            CACHE.write_text(json.dumps(dict(list(cache.items())[-300:]), ensure_ascii=False), encoding="utf-8")
     drop: set[int] = set()
     for g in groups:
         keep = g[0]  # items는 점수 높은 순으로 들어옴
@@ -168,11 +186,9 @@ def _write_batch(category: str, style: str, items: list[dict]) -> dict[int, dict
     )
     client = anthropic.Anthropic()
     try:
-        response = client.beta.messages.create(
+        response = client.messages.create(
             model=MODEL,
             max_tokens=16000,
-            betas=["server-side-fallback-2026-07-01"],
-            fallbacks="default",
             output_config={"effort": "low", "format": {"type": "json_schema", "schema": WRITE_SCHEMA}},
             messages=[{"role": "user", "content": prompt}],
         )
@@ -264,11 +280,9 @@ def _pick_batch(category: str, items: list[dict]) -> dict[int, list[int]]:
                 content.append({"type": "image", "source": {"type": "base64", "media_type": "image/jpeg", "data": b}})
     client = anthropic.Anthropic()
     try:
-        response = client.beta.messages.create(
+        response = client.messages.create(
             model=MODEL,
             max_tokens=4000,
-            betas=["server-side-fallback-2026-07-01"],
-            fallbacks="default",
             output_config={"effort": "low", "format": {"type": "json_schema", "schema": PICK_SCHEMA}},
             messages=[{"role": "user", "content": content}],
         )
@@ -326,11 +340,9 @@ def humor_filter(items: list[dict]) -> dict[int, bool]:
     )
     client = anthropic.Anthropic()
     try:
-        response = client.beta.messages.create(
+        response = client.messages.create(
             model=MODEL,
             max_tokens=8000,
-            betas=["server-side-fallback-2026-07-01"],
-            fallbacks="default",
             output_config={"effort": "low", "format": {"type": "json_schema", "schema": FUNNY_SCHEMA}},
             messages=[{"role": "user", "content": prompt}],
         )
