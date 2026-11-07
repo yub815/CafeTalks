@@ -10,6 +10,8 @@ import os
 from pathlib import Path
 
 MODEL = "claude-haiku-5-5"   # 비용 때문에 Haiku (Opus의 약 1/40 가격). 결과가 아쉬우면 claude-sonnet-5-5로
+# 이 분류는 Claude에 묻지 않음 (예: LLM_SKIP_CATEGORIES="신상") — 비용 아낄 때
+SKIP = {c.strip() for c in os.environ.get("LLM_SKIP_CATEGORIES", "").split(",") if c.strip()}
 CACHE = Path(__file__).resolve().parent / "data" / "dedupe_cache.json"
 
 SCHEMA = {
@@ -36,6 +38,8 @@ GUIDE = {
 def find_duplicates(category: str, items: list[dict]) -> list[list[int]]:
     """items: [{"title":..., "summary":...}] → 같은 소식 번호 묶음 리스트."""
     find_duplicates.failed = True  # 끝까지 성공하면 False로 바꿈 (실패한 결과는 저장하지 않게)
+    if category in SKIP:
+        return []
     if len(items) < 2 or not os.environ.get("ANTHROPIC_API_KEY"):
         return []
     import anthropic
@@ -164,6 +168,8 @@ def write_comments(category: str, style: str, items: list[dict]) -> dict[int, di
 
 def _write_batch(category: str, style: str, items: list[dict]) -> dict[int, dict]:
     """items: [{"title","summary"}] → {번호: {"heading", "comment"}}. 키가 없거나 실패하면 {}."""
+    if category in SKIP:
+        return {}
     if not items or not os.environ.get("ANTHROPIC_API_KEY"):
         return {}
     import anthropic
@@ -259,6 +265,8 @@ def pick_product_images(category: str, items: list[dict]) -> dict[int, list[int]
 
 
 def _pick_batch(category: str, items: list[dict]) -> dict[int, list[int]]:
+    if category in SKIP:
+        return {}
     if not items or not os.environ.get("ANTHROPIC_API_KEY"):
         return {}
     import anthropic

@@ -14,6 +14,10 @@ on:
         description: "유머만 새로 수집하기"
         type: boolean
         default: false
+      skip_claude:
+        description: "Claude 정리를 건너뛸 분류 (쉼표로, 예: 신상)"
+        type: string
+        default: ""
       games_only:
         description: "게임 검색 목록만 채우기"
         type: boolean
@@ -42,6 +46,7 @@ jobs:
       - name: 수집 + 웹페이지 데이터 만들기
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}  # 없으면 중복 검사만 건너뜀
+          LLM_SKIP_CATEGORIES: ${{ inputs.skip_claude }}
         run: |
           if [ "${{ inputs.games_only }}" = "true" ]; then python build_site.py --games-only
           elif [ "${{ inputs.export_only }}" = "true" ]; then python build_site.py --export-only
