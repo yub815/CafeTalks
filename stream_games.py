@@ -12,7 +12,6 @@ import math
 import os
 import re
 import time
-import xml.etree.ElementTree as ET
 from datetime import datetime, timedelta
 from pathlib import Path
 from urllib.parse import quote
@@ -178,23 +177,6 @@ def _key(name: str) -> str:
     return re.sub(r"[\s:·\-_'\"!?.,()\[\]]", "", name).lower()
 
 
-def web_search(q: str) -> tuple[str, str]:
-    """빙 검색 첫 결과 (주소, 설명). 나무위키·방송 사이트는 건너뜀."""
-    r = collector.get(f"https://www.bing.com/search?q={quote(q)}&format=rss&setlang=ko&cc=KR")
-    if not r:
-        return "", ""
-    try:
-        root = ET.fromstring(r.content)
-    except ET.ParseError:
-        return "", ""
-    for item in root.iter("item"):
-        link = item.findtext("link") or ""
-        if re.search(r"chzzk|youtube|youtu\.be|sooplive|afreeca|twitch|namu\.wiki|tiktok|instagram|blog\.naver", link):
-            continue
-        return link, (item.findtext("description") or "").strip()
-    return "", ""
-
-
 def steam_lookup(name: str) -> dict | None:
     try:
         games = json.loads((BASE / "docs" / "data" / "games.json").read_text(encoding="utf-8"))
@@ -202,7 +184,7 @@ def steam_lookup(name: str) -> dict | None:
         return None
     k = _key(name)
     for g in games:
-        if g.get("src") == "스팀" and k in (_key(g.get("ko", "")), _key(g.get("en", ""))):
+        if g.get("src") == "스팀" and len(k) >= 2 and k in (_key(g.get("ko", "")), _key(g.get("en", ""))):
             return g
     return None
 
@@ -227,7 +209,7 @@ def collect(cfg: dict, top: int = 25) -> list[dict]:
                 continue
         else:
             name = r["name"]
-        g = weeks.setdefault((wk, _key(name)), {"name": name, "week": wk, "first": r["t"], "ch": {}, "cat": {},
+        g = weeks.setdefault((wk, _key(name)), {"name": name, "week": wk, "first": r["t"], "ch": {}, "cat": {}, "cid": "", "new": False,
                                                 "imgs": [], "titles": []})
         g["first"] = min(g["first"], r["t"])
         if r["kind"] == "title":
@@ -238,6 +220,7 @@ def collect(cfg: dict, top: int = 25) -> list[dict]:
                 g["imgs"].append((r["v"], r["img"]))
         else:
             g["cat"][r["t"]] = (r["n"], r["v"])
+            g["cid"], g["new"] = r.get("cid", ""), g["new"] or r.get("new", False)
             if r.get("img") and not any(u == r["img"] for _, u in g["imgs"]):
                 g["imgs"].append((0, r["img"]))
     out = []
@@ -248,30 +231,35 @@ def collect(cfg: dict, top: int = 25) -> list[dict]:
             n = sum(a for a, _ in g["cat"].values()) / len(g["cat"])
             v = sum(b for _, b in g["cat"].values()) / len(g["cat"])
             # 늘 하는 게임은 빼고, 지난주들보다 시청자가 1.5배 넘게 늘었을 때만 (처음 보는 카테고리는 통과)
+            # (기록이 아직 없으면 치지직이 '신규'로 표시한 카테고리만)
             prev = [x for (w2, k2), x in weeks.items() if k2 == k and w2 < wk and x["cat"]]
             if prev:
                 pv = sum(sum(b for _, b in x["cat"].values()) / len(x["cat"]) for x in prev) / len(prev)
                 if v < pv * 1.5:
                     continue
+            elif not g["new"]:
+                continue
+            g["is_cat"] = True
             chans, view = max(chans, round(n)), max(view, v)
         if chans < 2:
             continue
-        g["score"] = round(chans * 5 + math.sqrt(view), 1)
+        g["score"] = round(chans * 10 + math.sqrt(view), 1)
         g["chans"] = chans
         out.append(g)
     items = []
     for wk in sorted({g["week"] for g in out}):
-        best = sorted([g for g in out if g["week"] == wk], key=lambda g: g["score"], reverse=True)[:top]
+        ranked = sorted([g for g in out if g["week"] == wk], key=lambda g: g["score"], reverse=True)
+        cats = [g for g in ranked if g.get("is_cat")][:5]  # 카테고리 있는 큰 게임은 5개까지만
+        best = sorted([g for g in ranked if not g.get("is_cat")][:top - len(cats)] + cats,
+                      key=lambda g: g["score"], reverse=True)
         for g in best:
             st = steam_lookup(g["name"])
             if st:
                 url, desc, shots = st["url"], st.get("desc", ""), st.get("images", [])[:2]
-            else:
-                url, desc = web_search(g["name"] + " 게임")
-                shots = []
-                time.sleep(0.5)
-            if not url:
-                url = "https://chzzk.naver.com/search?query=" + quote(g["name"])
+            elif g["cid"]:
+                url, desc, shots = f"https://chzzk.naver.com/category/GAME/{g['cid']}", "", []
+            else:  # 웹게임·테스트는 정확한 주소를 몰라서 네이버 검색으로 (글 쓸 때 바꿔 주세요)
+                url, desc, shots = "https://search.naver.com/search.naver?query=" + quote(g["name"]), "", []
             # 방송 화면은 시청자 많은 순으로 2장 (금방 사라지니 바로 저장)
             live = [u for _, u in sorted(g["imgs"], key=lambda x: -x[0])]
             imgs = []
@@ -286,7 +274,7 @@ def collect(cfg: dict, top: int = 25) -> list[dict]:
                 "category": cat_name, "source": "치지직 방송",
                 "url": url.split("#")[0] + "#w" + wk,  # 주마다 따로 (지난주에 떴던 게임이 이번 주에 또 떠도 보이게)
                 "title": g["name"],
-                "summary": (desc + "\n" if desc else "") + f"이번 주 치지직에서 {g['chans']}개 채널이 방송함."
+                "summary": (desc + "\n" if desc else "") + "요즘 방송에서 많이 하는 게임."
                            + (" 방송 제목 예: " + " / ".join(g["titles"][:5]) if g["titles"] else ""),
                 "images": imgs, "views": g["chans"], "score": g["score"] + 200,  # 스팀 순위보다 위에
                 "posted_at": g["first"],

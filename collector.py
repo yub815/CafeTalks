@@ -674,7 +674,10 @@ def main(humor_only: bool = False) -> None:
     try:
         import stream_games
         stream_games.snapshot(cfg)
-        for it in stream_games.collect(cfg):
+        got = stream_games.collect(cfg)
+        if got:  # 매번 전부 다시 계산하니 예전 결과는 지우고 새로 넣음
+            con.execute("DELETE FROM items WHERE source='치지직 방송'")
+        for it in got:
             upsert(con, it)
         con.commit()
     except Exception as e:
