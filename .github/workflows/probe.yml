@@ -1,0 +1,16 @@
+name: probe
+on: workflow_dispatch
+jobs:
+  p:
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          UA="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/130 Safari/537.36"
+          echo "== chzzk lives"; curl -sS -m 20 -A "$UA" "https://api.chzzk.naver.com/service/v1/lives?size=50&sortType=POPULAR" | python3 -c "
+          import json,sys,collections;d=json.load(sys.stdin);c=d['content'];print(list(c.keys()));L=c['data'];print(len(L),json.dumps(L[0],ensure_ascii=False)[:800]);print(c.get('page'))
+          agg=collections.Counter()
+          for x in L: agg[(x.get('categoryType'),x.get('liveCategoryValue'))]+=x.get('concurrentUserCount',0)
+          print(agg.most_common(30))"
+          echo "== chzzk categories"; curl -sS -m 20 -A "$UA" "https://api.chzzk.naver.com/service/v1/categories/live?size=50" | head -c 1500; echo
+          echo "== soop"; curl -sS -m 20 -A "$UA" "https://sch.sooplive.co.kr/api.php?m=categoryList&szKeyword=&szOrder=view_cnt&nPageNo=1&nListCnt=40&nOffset=0&szPlatform=pc" | head -c 1500; echo
+          echo "== youtube"; curl -sS -m 20 -A "$UA" -H "Accept-Language: ko" "https://www.youtube.com/results?search_query=%EC%A2%85%ED%95%A9%EA%B2%8C%EC%9E%84&sp=CAMSAhAB" | grep -o '"title":{"runs":\[{"text":"[^"]*"' | head -20
