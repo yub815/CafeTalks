@@ -1,0 +1,29 @@
+name: probe
+on: workflow_dispatch
+jobs:
+  p:
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          cat > p.py <<'PY'
+          import json,re,urllib.request,urllib.parse
+          UA={"User-Agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/130 Safari/537.36","Accept-Language":"ko-KR,ko"}
+          def walk(o):
+              if isinstance(o,dict):
+                  if "videoRenderer" in o: yield o["videoRenderer"]
+                  for v in o.values(): yield from walk(v)
+              elif isinstance(o,list):
+                  for v in o: yield from walk(v)
+          for q in ["종겜","종합게임","웹게임","인방 게임","테스트 해봤다"]:
+              for sp in ["CAMSAggD","EgIIAw%3D%3D"]:
+                  u="https://www.youtube.com/results?search_query="+urllib.parse.quote(q)+"&sp="+sp+"&gl=KR&hl=ko"
+                  h=urllib.request.urlopen(urllib.request.Request(u,headers=UA),timeout=20).read().decode()
+                  m=re.search(r"var ytInitialData = (\{.*?\});</script>",h)
+                  if not m: print(q,sp,"no data"); continue
+                  vs=list(walk(json.loads(m[1])))
+                  print("==",q,sp,len(vs))
+                  for v in vs[:12]:
+                      t="".join(r["text"] for r in v["title"]["runs"])
+                      print(" ",v.get("viewCountText",{}).get("simpleText"),"|",v.get("publishedTimeText",{}).get("simpleText"),"|",v.get("ownerText",{}).get("runs",[{}])[0].get("text"),"|",t[:70])
+          PY
+          python3 p.py
