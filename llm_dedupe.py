@@ -35,6 +35,31 @@ GUIDE = {
 }
 
 
+USAGE = Path(__file__).resolve().parent / "data" / "usage.json"
+PRICE_IN, PRICE_OUT = 0.10, 0.50   # Haiku 5.5, 100만 토큰당 달러 (입력 / 출력)
+
+
+def create(client, what: str, **kw):
+    """Claude 호출 + 쓴 토큰을 data/usage.json 에 기록 (비용 확인용, 최근 60일치)."""
+    resp = client.messages.create(**kw)
+    try:
+        from datetime import datetime, timedelta, timezone
+        kst = timezone(timedelta(hours=9))
+        try:
+            rows = json.loads(USAGE.read_text(encoding="utf-8"))
+        except (FileNotFoundError, json.JSONDecodeError):
+            rows = []
+        u = resp.usage
+        rows.append({"t": datetime.now(kst).isoformat(timespec="minutes"), "what": what,
+                     "in": u.input_tokens + (u.cache_read_input_tokens or 0) + (u.cache_creation_input_tokens or 0),
+                     "out": u.output_tokens})
+        cutoff = (datetime.now(kst) - timedelta(days=60)).isoformat()
+        USAGE.write_text(json.dumps([r for r in rows if r["t"] >= cutoff], ensure_ascii=False), encoding="utf-8")
+    except Exception:
+        pass
+    return resp
+
+
 def find_duplicates(category: str, items: list[dict]) -> list[list[int]]:
     """items: [{"title":..., "summary":...}] → 같은 소식 번호 묶음 리스트."""
     find_duplicates.failed = True  # 끝까지 성공하면 False로 바꿈 (실패한 결과는 저장하지 않게)
@@ -56,7 +81,7 @@ def find_duplicates(category: str, items: list[dict]) -> list[list[int]]:
     )
     client = anthropic.Anthropic()
     try:
-        response = client.messages.create(
+        response = create(client, "중복 묶기",
             model=MODEL,
             max_tokens=16000,
             output_config={"effort": "low", "format": {"type": "json_schema", "schema": SCHEMA}},
@@ -197,7 +222,7 @@ def _write_batch(category: str, style: str, items: list[dict]) -> dict[int, dict
     )
     client = anthropic.Anthropic()
     try:
-        response = client.messages.create(
+        response = create(client, "코멘트",
             model=MODEL,
             max_tokens=16000,
             output_config={"effort": "low", "format": {"type": "json_schema", "schema": WRITE_SCHEMA}},
@@ -293,7 +318,7 @@ def _pick_batch(category: str, items: list[dict]) -> dict[int, list[int]]:
                 content.append({"type": "image", "source": {"type": "base64", "media_type": "image/jpeg", "data": b}})
     client = anthropic.Anthropic()
     try:
-        response = client.messages.create(
+        response = create(client, "신상 사진 고르기",
             model=MODEL,
             max_tokens=4000,
             output_config={"effort": "low", "format": {"type": "json_schema", "schema": PICK_SCHEMA}},
@@ -353,7 +378,7 @@ def humor_filter(items: list[dict]) -> dict[int, bool]:
     )
     client = anthropic.Anthropic()
     try:
-        response = client.messages.create(
+        response = create(client, "유머 거르기",
             model=MODEL,
             max_tokens=8000,
             output_config={"effort": "low", "format": {"type": "json_schema", "schema": FUNNY_SCHEMA}},

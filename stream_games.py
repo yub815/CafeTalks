@@ -167,7 +167,7 @@ def _extract(titles: list[tuple[str, list[str]]]) -> dict[int, str]:
     )
     client = anthropic.Anthropic()
     try:
-        response = client.messages.create(
+        response = __import__("llm_dedupe").create(client, "게임 이름 뽑기",
             model="claude-haiku-5-5", max_tokens=16000,
             output_config={"effort": "low", "format": {"type": "json_schema", "schema": NAME_SCHEMA}},
             messages=[{"role": "user", "content": prompt}],
