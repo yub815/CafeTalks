@@ -25,7 +25,7 @@
 - `게임 추천` → `steam`: 스팀 검색 조건, `steam_release_days`: 며칠 이내 출시작만
 
 ## 구성
-- `collector.py`: 사이트별 수집 (디시 실베, 루리웹 유머, 더쿠 HOT, Bing 뉴스, 스팀, itch.io)
+- `collector.py`: 사이트별 수집 (디시 실베, 루리웹 유머, 더쿠 HOT, Bing 뉴스, 스팀, 치지직 방송)
 - `build_site.py`: 수집 → `docs/data/items.json` + `docs/img/` 로 내보내기
 - `docs/index.html`: 고르기·글 만들기 웹페이지
 - `app.py`: PC에서 직접 돌리는 버전 (`python app.py`)

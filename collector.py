@@ -545,7 +545,7 @@ def is_controversial(title: str, words: list[str]) -> bool:
     return any(w.lower().replace(" ", "") in t for w in words)
 
 
-# ---------------------------------------------------------------- 게임 추천 (스팀 / itch.io)
+# ---------------------------------------------------------------- 게임 추천 (스팀)
 def steam_details(appid: str) -> dict:
     r = get(f"https://store.steampowered.com/api/appdetails?appids={appid}&l=koreana&cc=kr")
     try:
@@ -609,30 +609,6 @@ def collect_steam(cat: str, conf: dict, since_days: int) -> list[dict]:
     return out
 
 
-def collect_itch(cat: str, url: str, limit: int = 15) -> list[dict]:
-    log("  - itch.io 웹게임 인기")
-    r = get(url)
-    if not r:
-        return []
-    soup = BeautifulSoup(r.text, "html.parser")
-    out = []
-    for rank, c in enumerate(soup.select("div.game_cell")[:limit]):
-        a = c.select_one("a.title")
-        img = c.select_one("img")
-        src = img.get("data-lazy_src") or img.get("src") if img else None
-        if not a or not src:
-            continue
-        txt = c.select_one(".game_text")
-        out.append({
-            "category": cat, "source": "itch.io 웹게임",
-            "url": a.get("href", ""), "title": a.get_text(strip=True),
-            "summary": txt.get_text(strip=True) if txt else "",
-            "images": [src], "score": max(60 - rank * 3, 1),
-            "posted_at": datetime.now(KST).isoformat(),
-        })
-    return out
-
-
 # ---------------------------------------------------------------- main
 def main(humor_only: bool = False) -> None:
     cfg = load_config()
@@ -643,6 +619,7 @@ def main(humor_only: bool = False) -> None:
     # 주차별로 지난 주 자료도 보여주니, 보관 기간(keep_weeks)보다 오래된 것만 지움
     old = (datetime.now(KST) - timedelta(weeks=cfg.get("keep_weeks", 5) + 1)).isoformat()
     con.execute("DELETE FROM items WHERE posted_at < ?", (old,))
+    con.execute("DELETE FROM items WHERE source LIKE 'itch%'")  # itch.io 게임은 이제 안 씀
     con.commit()
 
     # 1) 유머
@@ -693,6 +670,15 @@ def main(humor_only: bool = False) -> None:
         upsert(con, h)
         total += 1
     con.commit()
+    # 방송(치지직)에서 유행하는 게임: 3시간마다 방송 목록을 찍어 두고 순위 매김
+    try:
+        import stream_games
+        stream_games.snapshot(cfg)
+        for it in stream_games.collect(cfg):
+            upsert(con, it)
+        con.commit()
+    except Exception as e:
+        log(f"  ! 방송 게임 수집 실패: {e}")
     if humor_only:
         log(f"\n유머만 갱신 완료! {total}개 저장됨")
         con.close()
@@ -718,10 +704,6 @@ def main(humor_only: bool = False) -> None:
         if conf.get("steam"):
             log(f"[{cat}] 스팀 인기 게임 수집 중...")
             for it in collect_steam(cat, conf["steam"], conf.get("steam_release_days", 60)):
-                upsert(con, it)
-                total += 1
-        if conf.get("itch_url"):
-            for it in collect_itch(cat, conf["itch_url"]):
                 upsert(con, it)
                 total += 1
         log(f"[{cat}] 뉴스 수집 중...")

@@ -1,10 +1,9 @@
 """사이트의 '게임 검색'용 목록 만들기.
 
-브라우저에서는 스팀·itch.io를 바로 검색할 수 없어서(사이트들이 막음), 매일 수집할 때
+브라우저에서는 스팀을 바로 검색할 수 없어서(사이트들이 막음), 매일 수집할 때
 인기 게임 목록을 미리 모아 docs/data/games.json 에 넣어 둡니다. 사이트는 이 안에서 검색해요.
 
 - 스팀: SteamSpy 인기 순위(최근 2주, 역대, 보유자 순) → 한국어 이름·설명·스크린샷 (하루 최대 MAX_DETAILS개씩 채움)
-- itch.io: 웹게임 인기·평점 순위
 """
 from __future__ import annotations
 
@@ -63,29 +62,6 @@ def steam_full(appid: str) -> dict | None:
     }
 
 
-def itch_games() -> list[dict]:
-    out = []
-    for url in ("https://itch.io/games/platform-web", "https://itch.io/games/top-rated/platform-web",
-                "https://itch.io/games/top-sellers/platform-web", "https://itch.io/games/new-and-popular/platform-web"):
-        for page in (1, 2):
-            r = collector.get(f"{url}?page={page}")
-            if not r:
-                break
-            soup = BeautifulSoup(r.text, "html.parser")
-            for c in soup.select("div.game_cell"):
-                a = c.select_one("a.title")
-                img = c.select_one("img")
-                src = (img.get("data-lazy_src") or img.get("src")) if img else None
-                if not a or not a.get("href"):
-                    continue
-                txt = c.select_one(".game_text")
-                out.append({"id": "itch:" + a["href"], "en": a.get_text(strip=True), "ko": "",
-                            "url": a["href"], "desc": txt.get_text(" ", strip=True) if txt else "",
-                            "images": [src] if src else [], "src": "itch.io 웹게임"})
-            time.sleep(1)
-    return out
-
-
 def build(max_details: int = MAX_DETAILS) -> None:
     try:
         cache = json.loads(CACHE.read_text(encoding="utf-8"))
@@ -120,12 +96,9 @@ def build(max_details: int = MAX_DETAILS) -> None:
                       "desc": g.get("desc", ""), "genres": g.get("genres", []),
                       "images": g.get("images") or [f"https://cdn.akamai.steamstatic.com/steam/apps/{appid}/header.jpg"],
                       "src": "스팀"})
-    itch = itch_games()
-    seen = {g["url"] for g in games}
-    games += [g for g in itch if g["url"] not in seen and not seen.add(g["url"])]
     OUT.parent.mkdir(parents=True, exist_ok=True)
     OUT.write_text(json.dumps(games, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
-    print(f"  게임 검색 목록: 스팀 {len(games) - len(itch)}개(이번에 {fetched}개 새로 읽음) + itch.io {len(itch)}개")
+    print(f"  게임 검색 목록: 스팀 {len(games)}개(이번에 {fetched}개 새로 읽음)")
 
 
 if __name__ == "__main__":
