@@ -229,10 +229,9 @@
   "humor_max_images": 2,
   "keep_weeks": 5,
   "stream_games": {
-    "_설명": "치지직 방송에서 유행하는 게임 찾기. skip_categories에 늘 하는 큰 게임을 넣으면 빠져요.",
+    "_설명": "유튜브(최근 일주일 영상)·치지직 방송에서 유행하는 게임 찾기. youtube_queries 검색어를 바꿀 수 있고, skip_categories에 넣은 게임은 빠져요.",
     "enabled": true,
     "category": "게임 추천",
-    "min_category_channels": 5,
     "skip_categories": [
       "리그 오브 레전드",
       "배틀그라운드",
@@ -276,7 +275,19 @@
       "검은사막",
       "GTA 5",
       "파이널판타지14",
-      "파이널 판타지 XIV"
-    ]
+      "파이널 판타지 XIV",
+      "연잎마을",
+      "연잎마을2"
+    ],
+    "youtube_queries": [
+      "종합게임",
+      "종겜",
+      "인디게임",
+      "공포게임",
+      "웹게임",
+      "신작 게임",
+      "테스트 해보기"
+    ],
+    "min_youtube_views": 5000
   }
 }

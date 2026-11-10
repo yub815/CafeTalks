@@ -173,7 +173,7 @@ def rule_dedupe(out: list[dict]) -> list[dict]:
     kept: list[dict] = []
     dropped = 0
     for it in out:
-        if it["category"] == "유머" or it["source"].startswith(("스팀", "치지직")):
+        if it["category"] == "유머" or it["source"].startswith(("스팀", "치지직", "유튜브")):
             kept.append(it)
             continue
         if any(k["category"] == it["category"] and k["week"] == it["week"] and same_item(it, k) for k in kept):
@@ -208,7 +208,7 @@ def export() -> None:
                 keep.add(Path(p).name)
         if not imgs:
             continue
-        game = r["source"].startswith(("스팀", "치지직"))
+        game = r["source"].startswith(("스팀", "치지직", "유튜브"))
         out.append({
             "id": hashlib.sha1(r["url"].encode()).hexdigest()[:12],
             "category": r["category"], "source": r["source"], "url": r["url"],

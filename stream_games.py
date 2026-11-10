@@ -1,4 +1,7 @@
-"""방송(치지직)에서 요즘 유행하는 게임 찾기.
+"""유튜브·방송(치지직)에서 요즘 유행하는 게임 찾기.
+
+유튜브: 매일 '종합게임', '종겜' 같은 검색어로 최근 일주일 영상(조회수 순)을 모아 data/streams.json 에 넣고,
+제목에서 게임 이름을 뽑아 주마다 조회수·채널 수로 순위를 매겨요 (유튜브가 주 기준, 치지직은 보너스 점수).
 
 웹게임·테스트류(예: 에이징커브 테스트)는 따로 카테고리가 없어서 '종합 게임'이나 '토크'로 방송하고,
 게임 이름은 방송 제목에 들어가요. 그래서 3시간마다 방송 목록을 찍어 두고(data/streams.json),
@@ -55,7 +58,7 @@ def _thumb(live: dict) -> str:
     return u.replace("{type}", "720") if u else ""
 
 
-def snapshot(cfg: dict) -> None:
+def snapshot(cfg: dict, with_youtube: bool = False) -> None:
     """지금 치지직 방송 목록을 data/streams.json 에 추가."""
     sc = cfg.get("stream_games", {})
     if not sc.get("enabled", True):
@@ -71,36 +74,69 @@ def snapshot(cfg: dict) -> None:
             rows.append({"t": now, "kind": "title", "title": title[:120], "tags": tags[:6],
                          "ch": (l.get("channel") or {}).get("channelId", ""),
                          "v": l.get("concurrentUserCount", 0), "img": _thumb(l)})
-    # 2) 따로 카테고리가 있는 게임
-    skip = set(sc.get("skip_categories", []))
-    cats, nxt = [], None
-    for _ in range(4):
-        q = "size=50" + ("&" + "&".join(f"{k}={quote(str(v))}" for k, v in nxt.items()) if nxt else "")
-        c = _json(f"{API}/v1/categories/live?{q}")
-        if not c:
-            break
-        cats += c.get("data", [])
-        nxt = (c.get("page") or {}).get("next")
-        if not nxt:
-            break
-    for c in cats:
-        name = c.get("categoryValue", "")
-        if c.get("categoryType") != "GAME" or c.get("categoryId") == "various_games" or name in skip:
-            continue
-        if c.get("openLiveCount", 0) < sc.get("min_category_channels", 5):
-            continue
-        rows.append({"t": now, "kind": "cat", "name": name, "cid": c.get("categoryId"),
-                     "n": c.get("openLiveCount", 0), "v": c.get("concurrentUserCount", 0),
-                     "new": bool(c.get("newCategory")), "img": c.get("posterImageUrl") or ""})
+    if with_youtube:
+        rows += youtube(sc.get("youtube_queries", ["종합게임", "종겜"]))
     try:
         old = json.loads(SNAP.read_text(encoding="utf-8"))
     except (FileNotFoundError, json.JSONDecodeError):
         old = []
     cutoff = (datetime.now(collector.KST) - timedelta(weeks=cfg.get("keep_weeks", 5))).isoformat()
-    old = [r for r in old if r["t"] >= cutoff] + rows
+    ids = {r["id"] for r in rows if r["kind"] == "yt"}
+    old = [r for r in old if r["t"] >= cutoff and r["kind"] != "cat" and r.get("id") not in ids] + rows
     SNAP.write_text(json.dumps(old, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
     print(f"  [게임 추천] 치지직 방송 {sum(r['kind'] == 'title' for r in rows)}개, "
-          f"게임 카테고리 {sum(r['kind'] == 'cat' for r in rows)}개 저장")
+          f"유튜브 영상 {sum(r['kind'] == 'yt' for r in rows)}개 저장")
+
+
+def _ago(text: str) -> datetime:
+    now = datetime.now(collector.KST)
+    m = re.search(r"(\d+)\s*(초|분|시간|일|주|개월|년)", text or "")
+    if not m:
+        return now
+    n = int(m[1])
+    return now - {"초": timedelta(seconds=n), "분": timedelta(minutes=n), "시간": timedelta(hours=n),
+                  "일": timedelta(days=n), "주": timedelta(weeks=n), "개월": timedelta(days=30 * n),
+                  "년": timedelta(days=365 * n)}[m[2]]
+
+
+def _videos(o):
+    if isinstance(o, dict):
+        if "videoRenderer" in o:
+            yield o["videoRenderer"]
+        for v in o.values():
+            yield from _videos(v)
+    elif isinstance(o, list):
+        for v in o:
+            yield from _videos(v)
+
+
+def youtube(queries: list[str]) -> list[dict]:
+    """유튜브 검색 (이번 주 업로드만, 조회수 순 + 관련도 순)."""
+    out, seen = [], set()
+    for q in queries:
+        for sp in ("CAMSAggD", "EgIIAw%3D%3D"):  # 이번 주·조회수 순 / 이번 주
+            r = collector.get(f"https://www.youtube.com/results?search_query={quote(q)}&sp={sp}&gl=KR&hl=ko",
+                              headers={"Accept-Language": "ko-KR,ko"})
+            m = re.search(r"var ytInitialData = (\{.*?\});</script>", r.text) if r else None
+            if not m:
+                continue
+            try:
+                vids = list(_videos(json.loads(m[1])))
+            except json.JSONDecodeError:
+                continue
+            for v in vids:
+                vid = v.get("videoId")
+                when = (v.get("publishedTimeText") or {}).get("simpleText", "")
+                if not vid or vid in seen or re.search(r"(주|개월|년)", when):
+                    continue  # 일주일 넘은 영상은 뺌
+                seen.add(vid)
+                views = collector.to_int((v.get("viewCountText") or {}).get("simpleText", "0"))
+                out.append({"t": _ago(when).isoformat(timespec="minutes"), "kind": "yt", "id": vid,
+                            "title": "".join(x.get("text", "") for x in v.get("title", {}).get("runs", []))[:150],
+                            "tags": [], "ch": ((v.get("ownerText") or {}).get("runs") or [{}])[0].get("text", ""),
+                            "v": views, "img": f"https://i.ytimg.com/vi/{vid}/hqdefault.jpg"})
+            time.sleep(1)
+    return out
 
 
 NAME_SCHEMA = {
@@ -119,10 +155,12 @@ def _extract(titles: list[tuple[str, list[str]]]) -> dict[int, str]:
 
     lines = [f"{i} | {t} | 태그: {', '.join(tags)}" for i, (t, tags) in enumerate(titles)]
     prompt = (
-        "아래는 치지직 '종합 게임'·'토크' 방송 제목과 태그예요. 각 방송에서 지금 하고 있는 게임(스팀겜, 웹게임, 모바일겜)이나 "
-        "인터넷 테스트(예: 에이징커브 테스트)의 이름을 name에 적어 주세요.\n"
+        "아래는 유튜브 영상과 치지직 방송의 제목·태그예요. 각 영상/방송에서 하고 있는 게임(스팀겜, 웹게임, 모바일겜)이나 "
+        "인터넷 테스트(예: 에이징커브 테스트)의 이름을 name에 적어 주세요. 시청자가 직접 해볼 수 있는 게임을 추천하려는 거예요.\n"
         "- 제목이나 태그에 이름이 분명히 있을 때만 적고, 모르겠으면 빈 문자열.\n"
         "- 잡담·노래·합방·숙제처럼 게임 이름이 없으면 빈 문자열.\n"
+        "- 스트리머끼리 하는 서버·컨텐츠(예: 연잎마을, 마크 서버 컨텐츠, 시참, 대회, 멤버 모집)는 일반인이 할 수 없으니 빈 문자열.\n"
+        "- 게임 리뷰·뉴스·순위 영상, 게임 만들기(개발) 영상도 빈 문자열.\n"
         "- 여러 게임이 나열돼 있으면 첫 번째 것만.\n"
         "- 이름은 한국에서 흔히 부르는 공식 이름으로 맞춰 주세요 (띄어쓰기·영어/한글 표기를 통일해서 같은 게임은 같은 이름이 되게). "
         "'1일차', '데모', '신작' 같은 말은 빼요.\n\n" + "\n".join(lines)
@@ -155,7 +193,7 @@ def name_titles(snaps: list[dict]) -> dict[str, str]:
     if os.environ.get("ANTHROPIC_API_KEY") and "게임 추천" not in __import__("llm_dedupe").SKIP:
         todo, seen = [], set()
         for r in snaps:
-            if r["kind"] == "title" and r["title"] not in cache and r["title"] not in seen:
+            if r["kind"] in ("title", "yt") and r["title"] not in cache and r["title"] not in seen:
                 seen.add(r["title"])
                 todo.append((r["title"], r.get("tags", [])))
         for s in range(0, len(todo), 150):
@@ -166,8 +204,8 @@ def name_titles(snaps: list[dict]) -> dict[str, str]:
             for i, (t, _) in enumerate(part):
                 cache[t] = got.get(i, "")
         if todo:
-            print(f"  [게임 추천] Claude가 방송 제목 {len(todo)}개에서 게임 이름을 뽑았어요")
-    titles = {r["title"] for r in snaps if r["kind"] == "title"}
+            print(f"  [게임 추천] Claude가 영상·방송 제목 {len(todo)}개에서 게임 이름을 뽑았어요")
+    titles = {r["title"] for r in snaps if r["kind"] in ("title", "yt")}
     cache = {t: n for t, n in cache.items() if t in titles}
     NAMES.write_text(json.dumps(cache, ensure_ascii=False, indent=0), encoding="utf-8")
     return cache
@@ -177,93 +215,95 @@ def _key(name: str) -> str:
     return re.sub(r"[\s:·\-_'\"!?.,()\[\]]", "", name).lower()
 
 
-def steam_lookup(name: str) -> dict | None:
+STEAM_CACHE = BASE / "data" / "steam_lookup.json"
+
+
+def steam_lookup(name: str, cache: dict) -> dict | None:
+    """게임 이름 → 스팀 정보 (검색 목록에 없으면 스팀 검색으로 찾음)."""
+    k = _key(name)
+    if len(k) < 2:
+        return None
+    if k in cache:
+        return cache[k] or None
     try:
         games = json.loads((BASE / "docs" / "data" / "games.json").read_text(encoding="utf-8"))
     except (FileNotFoundError, json.JSONDecodeError):
-        return None
-    k = _key(name)
+        games = []
     for g in games:
-        if g.get("src") == "스팀" and len(k) >= 2 and k in (_key(g.get("ko", "")), _key(g.get("en", ""))):
-            return g
-    return None
+        if g.get("src") == "스팀" and k in (_key(g.get("ko", "")), _key(g.get("en", ""))):
+            cache[k] = {"url": g["url"], "desc": g.get("desc", ""), "images": g.get("images", [])[:2]}
+            return cache[k]
+    r = collector.get(f"https://store.steampowered.com/api/storesearch/?term={quote(name)}&l=koreana&cc=KR")
+    found = None
+    try:
+        for x in (r.json().get("items") or [])[:3] if r else []:
+            xk = _key(x.get("name", ""))
+            if xk and (xk == k or (len(k) >= 4 and (k in xk or xk in k))):
+                det = collector.steam_details(str(x["id"]))
+                found = {"url": f"https://store.steampowered.com/app/{x['id']}/", "desc": det.get("summary", ""),
+                         "images": det.get("images", [])[:2]}
+                break
+    except (ValueError, KeyError):
+        pass
+    time.sleep(0.5)
+    if r is not None:  # 접속이 됐을 때만 결과 저장 (못 찾음도 저장)
+        cache[k] = found or {}
+    return found
 
 
 def collect(cfg: dict, top: int = 25) -> list[dict]:
-    """주마다 방송에서 많이 보인 게임 → 게임 추천 항목들."""
-    import build_site  # 사진을 바로 내려받아 둠 (방송 썸네일은 금방 바뀜)
+    """주마다 유튜브에서 많이 보인 게임 → 게임 추천 항목들 (치지직 방송 수는 보너스)."""
+    import build_site
 
     try:
         snaps = json.loads(SNAP.read_text(encoding="utf-8"))
     except (FileNotFoundError, json.JSONDecodeError):
         return []
+    sc = cfg.get("stream_games", {})
     names = name_titles(snaps)
-    cat_name = cfg.get("stream_games", {}).get("category", "게임 추천")
-    skip = {_key(s) for s in cfg.get("stream_games", {}).get("skip_categories", [])}
+    cat_name = sc.get("category", "게임 추천")
+    skip = {_key(x) for x in sc.get("skip_categories", [])}
+    min_views = sc.get("min_youtube_views", 5000)
     weeks: dict[tuple[str, str], dict] = {}
     for r in snaps:
-        wk = build_site.week_of(r["t"])
-        if r["kind"] == "title":
-            name = names.get(r["title"], "")
-            if not name or _key(name) in skip:
-                continue
-        else:
-            name = r["name"]
-        g = weeks.setdefault((wk, _key(name)), {"name": name, "week": wk, "first": r["t"], "ch": {}, "cat": {}, "cid": "", "new": False,
-                                                "imgs": [], "titles": []})
-        g["first"] = min(g["first"], r["t"])
-        if r["kind"] == "title":
-            g["ch"][r["ch"]] = max(g["ch"].get(r["ch"], 0), r["v"])
-            if r["title"] not in g["titles"]:
-                g["titles"].append(r["title"])
-            if r.get("img"):
-                g["imgs"].append((r["v"], r["img"]))
-        else:
-            g["cat"][r["t"]] = (r["n"], r["v"])
-            g["cid"], g["new"] = r.get("cid", ""), g["new"] or r.get("new", False)
-            if r.get("img") and not any(u == r["img"] for _, u in g["imgs"]):
-                g["imgs"].append((0, r["img"]))
-    out = []
-    for (wk, k), g in weeks.items():
-        chans = len(g["ch"])
-        view = sum(g["ch"].values())
-        if g["cat"]:  # 카테고리 게임: 찍은 때마다의 평균 방송 수·시청자 수
-            n = sum(a for a, _ in g["cat"].values()) / len(g["cat"])
-            v = sum(b for _, b in g["cat"].values()) / len(g["cat"])
-            # 늘 하는 게임은 빼고, 지난주들보다 시청자가 1.5배 넘게 늘었을 때만 (처음 보는 카테고리는 통과)
-            # (기록이 아직 없으면 치지직이 '신규'로 표시한 카테고리만)
-            prev = [x for (w2, k2), x in weeks.items() if k2 == k and w2 < wk and x["cat"]]
-            if prev:
-                pv = sum(sum(b for _, b in x["cat"].values()) / len(x["cat"]) for x in prev) / len(prev)
-                if v < pv * 1.5:
-                    continue
-            elif not g["new"]:
-                continue
-            g["is_cat"] = True
-            chans, view = max(chans, round(n)), max(view, v)
-        if chans < 2:
+        if r["kind"] not in ("title", "yt"):
             continue
-        g["score"] = round(chans * 10 + math.sqrt(view), 1)
-        g["chans"] = chans
+        name = names.get(r["title"], "")
+        if not name or _key(name) in skip:
+            continue
+        wk = build_site.week_of(r["t"])
+        g = weeks.setdefault((wk, _key(name)), {"name": name, "week": wk, "first": r["t"], "yt": {}, "ytch": set(),
+                                                "ch": set(), "imgs": [], "titles": []})
+        g["first"] = min(g["first"], r["t"])
+        if r["kind"] == "yt":
+            g["yt"][r["id"]] = r
+            g["ytch"].add(r["ch"])
+        else:
+            g["ch"].add(r["ch"])
+    out = []
+    for g in weeks.values():
+        views = sum(v["v"] for v in g["yt"].values())
+        # 유튜브에 나온 게임만 (조회수가 적당히 있거나, 여러 채널이 올렸을 때)
+        if not g["yt"] or (views < min_views and len(g["ytch"]) < 2):
+            continue
+        g["score"] = round(math.sqrt(views) + 20 * len(g["ytch"]) + 5 * len(g["ch"]), 1)
+        g["views"] = views
         out.append(g)
+    try:
+        steam_cache = json.loads(STEAM_CACHE.read_text(encoding="utf-8"))
+    except (FileNotFoundError, json.JSONDecodeError):
+        steam_cache = {}
     items = []
     for wk in sorted({g["week"] for g in out}):
-        ranked = sorted([g for g in out if g["week"] == wk], key=lambda g: g["score"], reverse=True)
-        cats = [g for g in ranked if g.get("is_cat")][:5]  # 카테고리 있는 큰 게임은 5개까지만
-        best = sorted([g for g in ranked if not g.get("is_cat")][:top - len(cats)] + cats,
-                      key=lambda g: g["score"], reverse=True)
-        for g in best:
-            st = steam_lookup(g["name"])
+        for g in sorted([g for g in out if g["week"] == wk], key=lambda g: g["score"], reverse=True)[:top]:
+            vids = sorted(g["yt"].values(), key=lambda v: -v["v"])
+            st = steam_lookup(g["name"], steam_cache)
             if st:
-                url, desc, shots = st["url"], st.get("desc", ""), st.get("images", [])[:2]
-            elif g["cid"]:
-                url, desc, shots = f"https://chzzk.naver.com/category/GAME/{g['cid']}", "", []
+                url, desc, shots = st["url"], st.get("desc", ""), st.get("images", [])
             else:  # 웹게임·테스트는 정확한 주소를 몰라서 네이버 검색으로 (글 쓸 때 바꿔 주세요)
                 url, desc, shots = "https://search.naver.com/search.naver?query=" + quote(g["name"]), "", []
-            # 방송 화면은 시청자 많은 순으로 2장 (금방 사라지니 바로 저장)
-            live = [u for _, u in sorted(g["imgs"], key=lambda x: -x[0])]
             imgs = []
-            for u in shots + live:
+            for u in shots + [v["img"] for v in vids]:
                 if len(imgs) >= 4:
                     break
                 if u not in imgs and build_site.save_image(u):
@@ -271,13 +311,14 @@ def collect(cfg: dict, top: int = 25) -> list[dict]:
             if not imgs:
                 continue
             items.append({
-                "category": cat_name, "source": "치지직 방송",
+                "category": cat_name, "source": "유튜브·방송 인기",
                 "url": url.split("#")[0] + "#w" + wk,  # 주마다 따로 (지난주에 떴던 게임이 이번 주에 또 떠도 보이게)
                 "title": g["name"],
-                "summary": (desc + "\n" if desc else "") + "요즘 방송에서 많이 하는 게임."
-                           + (" 방송 제목 예: " + " / ".join(g["titles"][:5]) if g["titles"] else ""),
-                "images": imgs, "views": g["chans"], "score": g["score"] + 200,  # 스팀 순위보다 위에
+                "summary": (desc + "\n" if desc else "") + "요즘 유튜브·방송에서 많이 하는 게임. 영상 제목 예: "
+                           + " / ".join(v["title"] for v in vids[:4]),
+                "images": imgs, "views": g["views"], "score": g["score"] + 200,  # 스팀 순위보다 위에
                 "posted_at": g["first"],
             })
-    print(f"  [게임 추천] 방송에서 많이 보인 게임 {len(items)}개")
+    STEAM_CACHE.write_text(json.dumps(steam_cache, ensure_ascii=False), encoding="utf-8")
+    print(f"  [게임 추천] 유튜브·방송에서 많이 보인 게임 {len(items)}개")
     return items

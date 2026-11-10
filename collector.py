@@ -673,10 +673,10 @@ def main(humor_only: bool = False) -> None:
     # 방송(치지직)에서 유행하는 게임: 3시간마다 방송 목록을 찍어 두고 순위 매김
     try:
         import stream_games
-        stream_games.snapshot(cfg)
+        stream_games.snapshot(cfg, with_youtube=not humor_only)  # 유튜브는 하루 한 번
         got = stream_games.collect(cfg)
         if got:  # 매번 전부 다시 계산하니 예전 결과는 지우고 새로 넣음
-            con.execute("DELETE FROM items WHERE source='치지직 방송'")
+            con.execute("DELETE FROM items WHERE source IN ('치지직 방송', '유튜브·방송 인기')")
         for it in got:
             upsert(con, it)
         con.commit()

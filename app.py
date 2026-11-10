@@ -172,7 +172,7 @@ LIST = """
       · <a href="#" onclick="hideItem({{ r['id'] }});return false" style="color:var(--muted)">숨기기</a></div>
     <div class="title">{{ r['title'] }}</div>
     {% if roundup %}
-      <input type="text" name="h{{ r['id'] }}" value="{{ r['title'] if r['source'].startswith(('스팀','치지직')) else clean(r['title']) }}" placeholder="가운데 들어갈 작은 제목">
+      <input type="text" name="h{{ r['id'] }}" value="{{ r['title'] if r['source'].startswith(('스팀','치지직','유튜브')) else clean(r['title']) }}" placeholder="가운데 들어갈 작은 제목">
       <textarea name="t{{ r['id'] }}" placeholder="코멘트 2~4줄">{{ comment(r['summary']) }}</textarea>
       {% if imgs|length > 1 %}<div class="meta">넣을 이미지:</div><div class="thumbs">{% for u in imgs %}
         <label><input type="checkbox" name="i{{ r['id'] }}" value="{{ loop.index0 }}" {{ 'checked' if loop.index0 < 1 else '' }}><img loading="lazy" src="/img?u={{ u|urlencode }}"></label>{% endfor %}</div>{% endif %}
