@@ -143,8 +143,9 @@ NAME_SCHEMA = {
     "type": "object",
     "properties": {"items": {"type": "array", "items": {
         "type": "object",
-        "properties": {"i": {"type": "integer"}, "name": {"type": "string"}},
-        "required": ["i", "name"], "additionalProperties": False}}},
+        "properties": {"i": {"type": "integer"}, "name": {"type": "string"},
+                       "en": {"type": "string", "description": "스팀 등에 올라간 영어 원래 이름 (알면). 모르면 빈 문자열"}},
+        "required": ["i", "name", "en"], "additionalProperties": False}}},
     "required": ["items"], "additionalProperties": False,
 }
 
@@ -182,7 +183,9 @@ def _extract(titles: list[tuple[str, list[str]]]) -> dict[int, str]:
         rows = json.loads(text).get("items", [])
     except (json.JSONDecodeError, AttributeError):
         return {}
-    return {r["i"]: r["name"].strip() for r in rows if isinstance(r.get("i"), int) and 0 <= r["i"] < len(titles)}
+    # 값은 "한국어 이름\t영어 이름" (영어 이름은 스팀 찾을 때 씀)
+    return {r["i"]: (r["name"].strip() + ("\t" + r["en"].strip() if r["name"].strip() and r.get("en", "").strip() else ""))
+            for r in rows if isinstance(r.get("i"), int) and 0 <= r["i"] < len(titles)}
 
 
 def name_titles(snaps: list[dict]) -> dict[str, str]:
@@ -268,13 +271,14 @@ def collect(cfg: dict, top: int = 25) -> list[dict]:
     for r in snaps:
         if r["kind"] not in ("title", "yt"):
             continue
-        name = names.get(r["title"], "")
+        name, _, en = names.get(r["title"], "").partition("\t")
         if not name or _key(name) in skip:
             continue
         wk = build_site.week_of(r["t"])
-        g = weeks.setdefault((wk, _key(name)), {"name": name, "week": wk, "first": r["t"], "yt": {}, "ytch": set(),
+        g = weeks.setdefault((wk, _key(name)), {"name": name, "en": en, "week": wk, "first": r["t"], "yt": {}, "ytch": set(),
                                                 "ch": set(), "imgs": [], "titles": []})
         g["first"] = min(g["first"], r["t"])
+        g["en"] = g["en"] or en
         if r["kind"] == "yt":
             g["yt"][r["id"]] = r
             g["ytch"].add(r["ch"])
@@ -297,13 +301,15 @@ def collect(cfg: dict, top: int = 25) -> list[dict]:
     for wk in sorted({g["week"] for g in out}):
         for g in sorted([g for g in out if g["week"] == wk], key=lambda g: g["score"], reverse=True)[:top]:
             vids = sorted(g["yt"].values(), key=lambda v: -v["v"])
-            st = steam_lookup(g["name"], steam_cache)
+            st = steam_lookup(g["name"], steam_cache) or (steam_lookup(g["en"], steam_cache) if g["en"] else None)
             if st:
                 url, desc, shots = st["url"], st.get("desc", ""), st.get("images", [])
             else:  # 웹게임·테스트는 정확한 주소를 몰라서 네이버 검색으로 (글 쓸 때 바꿔 주세요)
                 url, desc, shots = "https://search.naver.com/search.naver?query=" + quote(g["name"]), "", []
             imgs = []
-            for u in shots + [v["img"] for v in vids]:
+            # 사진: 스팀 스크린샷. 스팀에 없으면 유튜브가 영상 중간에서 뽑은 게임 화면(hq1~3, 썸네일 글씨 없음)
+            frames = [f"https://i.ytimg.com/vi/{v['id']}/hq{n}.jpg" for v in vids[:2] for n in (2, 1, 3)]
+            for u in (shots or frames):
                 if len(imgs) >= 4:
                     break
                 if u not in imgs and build_site.save_image(u):
