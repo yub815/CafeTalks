@@ -43,6 +43,13 @@ def week_of(posted_at: str) -> str:
     return (d - timedelta(days=d.weekday())).date().isoformat()
 
 
+def crop_black_bars(im):
+    """유튜브 영상 화면 위아래의 검은 띠 잘라내기."""
+    gray = im.convert("L").point(lambda v: 255 if v > 24 else 0)
+    box = gray.getbbox()
+    return im.crop(box) if box and (box[3] - box[1]) > im.height * 0.4 else im
+
+
 def save_image(url: str) -> str | None:
     name = hashlib.sha1(url.encode()).hexdigest()[:16]
     for ext in (".jpg", ".png", ".gif", ".webp", ".mp4"):
@@ -61,6 +68,8 @@ def save_image(url: str) -> str | None:
     try:
         im = Image.open(io.BytesIO(data))
         im = im.convert("RGB")
+        if "ytimg.com" in url:
+            im = crop_black_bars(im)
         if im.width > 900:
             im = im.resize((900, round(im.height * 900 / im.width)))
         im.save(IMG / f"{name}.jpg", "JPEG", quality=85)
