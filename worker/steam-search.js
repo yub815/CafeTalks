@@ -18,6 +18,7 @@ export default {
     const url = new URL(req.url);
     const json = (o, s = 200) => new Response(JSON.stringify(o), { status: s, headers: cors });
     try {
+      if (url.pathname === "/ping") return new Response("ok auto-deploy 1");  // 자동 배포 확인용
       if (url.pathname === "/search") {
         const q = (url.searchParams.get("q") || "").slice(0, 80);
         if (!q) return json({ items: [] });
