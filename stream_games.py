@@ -264,6 +264,35 @@ def steam_lookup(name: str, cache: dict) -> dict | None:
 FRAME_CACHE = BASE / "data" / "framecheck.json"
 
 
+def roblox_lookup(name: str, cache: dict) -> dict | None:
+    """로블록스 게임 검색 → 게임 페이지 주소, 설명, 게임 사진."""
+    k = "roblox:" + _key(name)
+    if k in cache:
+        return cache[k] or None
+    r = collector.get(f"https://apis.roblox.com/search-api/omni-search?searchQuery={quote(name)}&pageType=all&sessionId=cafetalks")
+    found = None
+    try:
+        for grp in (r.json().get("searchResults") or [])[:3] if r else []:
+            for x in grp.get("contents") or []:
+                xk = _key(re.sub(r"[^\w\s:'-]", "", x.get("name", "")))
+                if x.get("contentType") == "Game" and xk and (_key(name) in xk or xk in _key(name)):
+                    found = {"url": "https://www.roblox.com" + x.get("canonicalUrlPath", f"/games/{x.get('rootPlaceId')}"),
+                             "desc": (x.get("description") or "")[:400], "uid": x.get("universeId")}
+                    break
+            if found:
+                break
+        if found:
+            t = collector.get("https://thumbnails.roblox.com/v1/games/multiget/thumbnails"
+                              f"?universeIds={found['uid']}&countPerUniverse=4&size=768x432&format=Png")
+            data = (t.json().get("data") or [{}])[0] if t else {}
+            found["images"] = [x["imageUrl"] for x in data.get("thumbnails", []) if x.get("imageUrl")][:4]
+    except (ValueError, KeyError, IndexError):
+        found = None
+    if r is not None:
+        cache[k] = found or {}
+    return found
+
+
 def game_frames(name: str, urls: list[str], cache: dict) -> list[str]:
     """유튜브 영상 화면들 중 게임 화면만 (Claude가 직접 보고 고름, 결과는 data/framecheck.json에 저장)."""
     import build_site
@@ -336,11 +365,17 @@ def collect(cfg: dict, top: int = 25) -> list[dict]:
             st = steam_lookup(g["name"], steam_cache) or (steam_lookup(g["en"], steam_cache) if g["en"] else None)
             if st:
                 url, desc, shots = st["url"], st.get("desc", ""), st.get("images", [])
-            else:  # 웹게임·테스트는 정확한 주소를 몰라서 네이버 검색으로 (글 쓸 때 바꿔 주세요)
+            else:
                 if len(g["ytch"]) < 2:
                     continue  # 스팀에 없는데 한 채널만 올린 건 그 스트리머 컨텐츠일 때가 많아서 뺌
-                url, shots = "https://search.naver.com/search.naver?query=" + quote(g["name"]), []
-                desc = " / ".join(v["desc"] for v in vids[:3] if v.get("desc"))
+                rb = None
+                if re.search(r"(?i)로블록스|roblox|로블", " ".join(v["title"] for v in vids)):
+                    rb = roblox_lookup(g["en"] or g["name"], steam_cache) or (roblox_lookup(g["name"], steam_cache) if g["en"] else None)
+                if rb:  # 로블록스 게임 페이지
+                    url, desc, shots = rb["url"], "로블록스 게임. " + rb["desc"], rb.get("images", [])
+                else:  # 웹게임·테스트 등: 정확한 게임 주소를 몰라서 가장 많이 본 영상으로 (무슨 게임인지 바로 보이게)
+                    url, shots = f"https://www.youtube.com/watch?v={vids[0]['id']}", []
+                    desc = " / ".join(v["desc"] for v in vids[:3] if v.get("desc"))
             imgs = []
             # 사진: 스팀 스크린샷. 스팀에 없으면 유튜브가 영상 중간에서 뽑은 화면(hq1~3) 중
             # Claude가 게임 화면만 고름 (스트리머 얼굴 캠 화면은 뺌)

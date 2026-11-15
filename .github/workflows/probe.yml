@@ -1,9 +1,0 @@
-name: probe
-on: workflow_dispatch
-jobs:
-  p:
-    runs-on: ubuntu-latest
-    steps:
-      - run: |
-          curl -sS -m 20 "https://apis.roblox.com/search-api/omni-search?searchQuery=Monochrome&pageType=all&sessionId=abc" | head -c 1200; echo
-          echo ===; curl -sS -m 20 "https://apis.roblox.com/search-api/omni-search?searchQuery=%EB%AA%A8%EB%85%B8%ED%81%AC%EB%A1%AC&pageType=all&sessionId=abc" | head -c 600; echo

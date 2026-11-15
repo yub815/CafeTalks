@@ -1,0 +1,4 @@
+# Cloudflare가 GitHub에 올라온 이 폴더를 보고 자동으로 배포할 때 쓰는 설정
+name = "steam-search"
+main = "steam-search.js"
+compatibility_date = "2025-01-01"
