@@ -134,7 +134,9 @@ def youtube(queries: list[str]) -> list[dict]:
                 out.append({"t": _ago(when).isoformat(timespec="minutes"), "kind": "yt", "id": vid,
                             "title": "".join(x.get("text", "") for x in v.get("title", {}).get("runs", []))[:150],
                             "tags": [], "ch": ((v.get("ownerText") or {}).get("runs") or [{}])[0].get("text", ""),
-                            "v": views, "img": f"https://i.ytimg.com/vi/{vid}/hqdefault.jpg"})
+                            "v": views, "img": f"https://i.ytimg.com/vi/{vid}/hqdefault.jpg",
+                            "desc": " ".join("".join(x.get("text", "") for x in sn.get("snippetText", {}).get("runs", []))
+                                             for sn in v.get("detailedMetadataSnippets", []))[:300]})
             time.sleep(1)
     return out
 
@@ -160,7 +162,8 @@ def _extract(titles: list[tuple[str, list[str]]]) -> dict[int, str]:
         "인터넷 테스트(예: 에이징커브 테스트)의 이름을 name에 적어 주세요. 시청자가 직접 해볼 수 있는 게임을 추천하려는 거예요.\n"
         "- 제목이나 태그에 이름이 분명히 있을 때만 적고, 모르겠으면 빈 문자열.\n"
         "- 잡담·노래·합방·숙제처럼 게임 이름이 없으면 빈 문자열.\n"
-        "- 스트리머끼리 하는 서버·컨텐츠(예: 연잎마을, 마크 서버 컨텐츠, 시참, 대회, 멤버 모집)는 일반인이 할 수 없으니 빈 문자열.\n"
+        "- 스트리머끼리 하는 서버·컨텐츠(예: 연잎마을, 봉누도 같은 GTA·마크 RP 서버, 시참, 대회, 멤버 모집)는 일반인이 할 수 없으니 빈 문자열.\n"
+        "- 게임의 DLC·스킨·업데이트 소식이 아니라 게임 자체 이름만.\n"
         "- 게임 리뷰·뉴스·순위 영상, 게임 만들기(개발) 영상도 빈 문자열.\n"
         "- 여러 게임이 나열돼 있으면 첫 번째 것만.\n"
         "- 이름은 한국에서 흔히 부르는 공식 이름으로 맞춰 주세요 (띄어쓰기·영어/한글 표기를 통일해서 같은 게임은 같은 이름이 되게). "
@@ -241,7 +244,11 @@ def steam_lookup(name: str, cache: dict) -> dict | None:
     try:
         for x in (r.json().get("items") or [])[:3] if r else []:
             xk = _key(x.get("name", ""))
-            if xk and (xk == k or (len(k) >= 4 and (k in xk or xk in k))):
+            nm = x.get("name", "")
+            if re.search(r"(?i)\b(dlc|pack|soundtrack|ost|skin|bundle|artbook)\b|사운드트랙|스킨", nm):
+                continue
+            # 이름이 같거나, 부제만 붙은 경우(예: 'R.E.P.O.' / 'Monochrome: ...')만 같은 게임으로 봄
+            if xk and (xk == k or (len(k) >= 4 and _key(nm.split(":")[0]) == k)):
                 det = collector.steam_details(str(x["id"]))
                 found = {"url": f"https://store.steampowered.com/app/{x['id']}/", "desc": det.get("summary", ""),
                          "images": det.get("images", [])[:2]}
@@ -305,7 +312,10 @@ def collect(cfg: dict, top: int = 25) -> list[dict]:
             if st:
                 url, desc, shots = st["url"], st.get("desc", ""), st.get("images", [])
             else:  # 웹게임·테스트는 정확한 주소를 몰라서 네이버 검색으로 (글 쓸 때 바꿔 주세요)
-                url, desc, shots = "https://search.naver.com/search.naver?query=" + quote(g["name"]), "", []
+                if len(g["ytch"]) < 2:
+                    continue  # 스팀에 없는데 한 채널만 올린 건 그 스트리머 컨텐츠일 때가 많아서 뺌
+                url, shots = "https://search.naver.com/search.naver?query=" + quote(g["name"]), []
+                desc = " / ".join(v["desc"] for v in vids[:3] if v.get("desc"))
             imgs = []
             # 사진: 스팀 스크린샷. 스팀에 없으면 유튜브가 영상 중간에서 뽑은 게임 화면(hq1~3, 썸네일 글씨 없음)
             frames = [f"https://i.ytimg.com/vi/{v['id']}/hq{n}.jpg" for v in vids[:2] for n in (2, 1, 3)]
@@ -320,7 +330,7 @@ def collect(cfg: dict, top: int = 25) -> list[dict]:
                 "category": cat_name, "source": "유튜브·방송 인기",
                 "url": url.split("#")[0] + "#w" + wk,  # 주마다 따로 (지난주에 떴던 게임이 이번 주에 또 떠도 보이게)
                 "title": g["name"],
-                "summary": (desc + "\n" if desc else "") + "요즘 유튜브·방송에서 많이 하는 게임. 영상 제목 예: "
+                "summary": (desc + "\n" if desc else "") + "영상 제목 예: "
                            + " / ".join(v["title"] for v in vids[:4]),
                 "images": imgs, "views": g["views"], "score": g["score"] + 200,  # 스팀 순위보다 위에
                 "posted_at": g["first"],
