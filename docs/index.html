@@ -55,7 +55,7 @@ textarea{min-height:100px}
 <main id="main"><div class="empty">불러오는 중...</div></main>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 <script>
-const STEAM_PROXY = '';  // 스팀 전체 검색용 Cloudflare Worker 주소 (worker/steam-search.js)
+const STEAM_PROXY = 'https://steam-search.yub815.workers.dev';  // 스팀 전체 검색용 Cloudflare Worker 주소 (worker/steam-search.js)
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 let DATA = null, CAT = null, SHOW_USED = false, WEEK = null;
