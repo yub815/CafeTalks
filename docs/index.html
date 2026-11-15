@@ -299,6 +299,19 @@ function addCustom(g){
     title: g.ko || g.en, heading: g.ko || g.en, comment: g.desc || '', url: g.url || '', images: g.images || [],
     posted_at: new Date().toISOString(), views: 0, likes: 0, comments: 0});
   saveCustom(); renderList();
+  if(CAT === '게임 추천' && PROXY && g.desc) writeComment(CUSTOM[0]);
+}
+
+// 직접 추가한 게임도 Claude가 다요체 코멘트를 써 줌 (중계 서버의 /write)
+async function writeComment(it){
+  const ta = $('#t' + it.id); if(ta){ ta.value = '코멘트 쓰는 중...'; }
+  try{
+    const r = await fetch(PROXY + '/write', {method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({name: it.title, desc: it.comment})});
+    const d = await r.json();
+    if(d.comment){ it.comment = d.comment; saveCustom(); }
+  }catch(e){}
+  const t2 = $('#t' + it.id); if(t2) t2.value = it.comment;
 }
 async function setupGameAdd(){
   const box = $('#gres');
