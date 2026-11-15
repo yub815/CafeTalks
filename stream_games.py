@@ -261,6 +261,27 @@ def steam_lookup(name: str, cache: dict) -> dict | None:
     return found
 
 
+FRAME_CACHE = BASE / "data" / "framecheck.json"
+
+
+def game_frames(name: str, urls: list[str], cache: dict) -> list[str]:
+    """유튜브 영상 화면들 중 게임 화면만 (Claude가 직접 보고 고름, 결과는 data/framecheck.json에 저장)."""
+    import build_site
+    import llm_dedupe
+
+    key = "|".join(urls)
+    if key in cache:
+        return cache[key]
+    paths = [build_site.DOCS / build_site.save_image(u) for u in urls]
+    got = llm_dedupe.pick_product_images("게임 추천", [{"title": name, "paths": [str(p) for p in paths]}],
+                                         guide=llm_dedupe.GAME_GUIDE)
+    if 0 not in got:  # Claude를 못 쓰면 고르지 않고 앞 2장만
+        return urls[:2]
+    keep = [urls[j] for j in got[0] if 0 <= j < len(urls)][:4]
+    cache[key] = keep
+    return keep
+
+
 def collect(cfg: dict, top: int = 25) -> list[dict]:
     """주마다 유튜브에서 많이 보인 게임 → 게임 추천 항목들 (치지직 방송 수는 보너스)."""
     import build_site
@@ -304,6 +325,10 @@ def collect(cfg: dict, top: int = 25) -> list[dict]:
         steam_cache = json.loads(STEAM_CACHE.read_text(encoding="utf-8"))
     except (FileNotFoundError, json.JSONDecodeError):
         steam_cache = {}
+    try:
+        frame_cache = json.loads(FRAME_CACHE.read_text(encoding="utf-8"))
+    except (FileNotFoundError, json.JSONDecodeError):
+        frame_cache = {}
     items = []
     for wk in sorted({g["week"] for g in out}):
         for g in sorted([g for g in out if g["week"] == wk], key=lambda g: g["score"], reverse=True)[:top]:
@@ -317,13 +342,16 @@ def collect(cfg: dict, top: int = 25) -> list[dict]:
                 url, shots = "https://search.naver.com/search.naver?query=" + quote(g["name"]), []
                 desc = " / ".join(v["desc"] for v in vids[:3] if v.get("desc"))
             imgs = []
-            # 사진: 스팀 스크린샷. 스팀에 없으면 유튜브가 영상 중간에서 뽑은 게임 화면(hq1~3, 썸네일 글씨 없음)
-            frames = [f"https://i.ytimg.com/vi/{v['id']}/hq{n}.jpg" for v in vids[:2] for n in (2, 1, 3)]
+            # 사진: 스팀 스크린샷. 스팀에 없으면 유튜브가 영상 중간에서 뽑은 화면(hq1~3) 중
+            # Claude가 게임 화면만 고름 (스트리머 얼굴 캠 화면은 뺌)
+            frames = [f"https://i.ytimg.com/vi/{v['id']}/hq{n}.jpg" for v in vids[:3] for n in (2, 1, 3)]
             for u in (shots or frames):
-                if len(imgs) >= 4:
+                if len(imgs) >= (4 if shots else 9):
                     break
                 if u not in imgs and build_site.save_image(u):
                     imgs.append(u)
+            if not shots and imgs:
+                imgs = game_frames(g["name"], imgs, frame_cache)
             if not imgs:
                 continue
             items.append({
@@ -336,5 +364,6 @@ def collect(cfg: dict, top: int = 25) -> list[dict]:
                 "posted_at": g["first"],
             })
     STEAM_CACHE.write_text(json.dumps(steam_cache, ensure_ascii=False), encoding="utf-8")
+    FRAME_CACHE.write_text(json.dumps(frame_cache, ensure_ascii=False), encoding="utf-8")
     print(f"  [게임 추천] 유튜브·방송에서 많이 보인 게임 {len(items)}개")
     return items

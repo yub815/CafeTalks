@@ -292,26 +292,33 @@ def _b64_small(path) -> str | None:
         return None
 
 
-def pick_product_images(category: str, items: list[dict]) -> dict[int, list[int]]:
+GAME_GUIDE = (
+    "게임 추천 글에 넣을 사진을 고르려고 해요. 항목마다 게임 화면 자체가 잘 보이는 사진만 골라 주세요.\n"
+    "좋은 사진: 게임 플레이 장면, 게임 그래픽·캐릭터·맵이 화면 대부분을 차지하는 것.\n"
+    "빼야 할 사진: 사람 얼굴·웹캠·실사 영상이 크게 나온 것(스트리머 얼굴 캠), 검은 화면, 자막만 크게 있는 것, 게임과 상관없는 장면.\n"
+    "keep에는 좋은 사진 번호를 좋은 순서로 넣고, 하나도 없으면 빈 배열로 주세요.")
+
+
+def pick_product_images(category: str, items: list[dict], guide: str | None = None) -> dict[int, list[int]]:
     """items: [{"title", "paths": [로컬 jpg 경로]}] → {번호: [제품이 보이는 사진 번호, 좋은 순]}.
     4개씩 나눠서 사진을 직접 보고 고름. 키가 없거나 실패한 항목은 결과에 없음."""
     out: dict[int, list[int]] = {}
     for start in range(0, len(items), 4):
-        part = _pick_batch(category, items[start:start + 4])
+        part = _pick_batch(category, items[start:start + 4], guide)
         out.update({start + i: k for i, k in part.items()})
     if items:
         print(f"  [{category}] Claude가 사진 {len(out)}개 항목을 확인했어요")
     return out
 
 
-def _pick_batch(category: str, items: list[dict]) -> dict[int, list[int]]:
+def _pick_batch(category: str, items: list[dict], guide: str | None = None) -> dict[int, list[int]]:
     if category in SKIP:
         return {}
     if not items or not os.environ.get("ANTHROPIC_API_KEY"):
         return {}
     import anthropic
 
-    content = [{"type": "text", "text": (
+    content = [{"type": "text", "text": guide or (
         f"네이버 카페 '{category}' 모음글에 넣을 사진을 고르려고 해요. 항목마다 신상 제품 자체가 잘 보이는 사진만 골라 주세요.\n"
         "좋은 사진: 제품/패키지/메뉴 사진, 공식 홍보 이미지(제품이 크게 나온 것).\n"
         "빼야 할 사진: 사람(연예인, 모델, 방송 캡처)이 주인공이고 제품이 안 보이거나 작은 것, 매장 외관, 로고만 있는 것, "

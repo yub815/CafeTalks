@@ -32,6 +32,10 @@ textarea{min-height:100px}
 .thumbs label{position:relative;cursor:pointer;display:block}
 .thumbs img,.thumbs video{width:56px;height:56px;object-fit:cover;border-radius:6px}
 .thumbs.big{gap:8px}
+.zoom{position:absolute;left:8px;bottom:10px;background:rgba(0,0,0,.7);color:#fff;border:1px solid #fff;border-radius:6px;font-size:12px;padding:2px 8px;cursor:zoom-in;z-index:2}
+#lightbox{position:fixed;inset:0;background:rgba(0,0,0,.88);display:none;align-items:center;justify-content:center;z-index:99;cursor:zoom-out;padding:20px}
+#lightbox img,#lightbox video{width:min(1100px,92vw);height:auto;max-height:90vh;object-fit:contain;border-radius:6px}
+#lightbox .lbhint{position:fixed;top:12px;right:16px;color:#ccc;font-size:13px}
 .thumbs.big img,.thumbs.big video{width:200px;height:150px;border:3px solid transparent;opacity:.55}
 .thumbs.big input{position:absolute;opacity:0;pointer-events:none}
 .thumbs.big input:checked+img,.thumbs.big input:checked+video{border-color:var(--accent);opacity:1}
@@ -57,6 +61,20 @@ textarea{min-height:100px}
 <script>
 const STEAM_PROXY = 'https://steam-search.yub815.workers.dev';  // 스팀 전체 검색용 Cloudflare Worker 주소 (worker/steam-search.js)
 const $ = s => document.querySelector(s);
+// 사진 크게 보기 (🔍 크게 버튼 → 화면 가득, 아무 데나 누르거나 Esc로 닫기)
+document.addEventListener('click', e => {
+  const z = e.target.closest('.zoom'); if(!z) return;
+  e.preventDefault(); e.stopPropagation();
+  let lb = document.getElementById('lightbox');
+  if(!lb){ lb = document.createElement('div'); lb.id = 'lightbox'; document.body.appendChild(lb);
+    lb.onclick = () => { lb.style.display = 'none'; lb.innerHTML = ''; }; }
+  const u = z.dataset.zoom;
+  lb.innerHTML = '<span class="lbhint">아무 데나 누르면 닫혀요</span>' + (u.endsWith('.mp4')
+    ? `<video src="${esc(u)}" autoplay loop muted playsinline controls></video>` : `<img src="${esc(u)}">`);
+  lb.style.display = 'flex';
+}, true);
+document.addEventListener('keydown', e => { const lb = document.getElementById('lightbox');
+  if(e.key === 'Escape' && lb){ lb.style.display = 'none'; lb.innerHTML = ''; } });
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 let DATA = null, CAT = null, SHOW_USED = false, WEEK = null;
 
@@ -148,7 +166,7 @@ function renderList(){
         <textarea id="t${it.id}" placeholder="코멘트">${esc(it.comment)}</textarea>`;
       if(it.images.length > 1){
         h += `<div class="meta">넣을 사진 (클릭해서 고르기):</div><div class="thumbs big">` + it.images.map((u, i) =>
-          `<label><input type="checkbox" class="img${it.id}" value="${i}" ${i === 0 ? 'checked' : ''}>${media(u)}</label>`).join('') + `</div>`;
+          `<label><input type="checkbox" class="img${it.id}" value="${i}" ${i === 0 ? 'checked' : ''}>${media(u)}<button type="button" class="zoom" data-zoom="${esc(u)}">🔍 크게</button></label>`).join('') + `</div>`;
       }
     }else{
       h += `<div style="display:flex;gap:8px;flex-wrap:wrap"><input type="text" id="h${it.id}" value="${esc(it.title)}" style="flex:1;min-width:200px">
