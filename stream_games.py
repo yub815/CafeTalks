@@ -325,6 +325,10 @@ def collect(cfg: dict, top: int = 25) -> list[dict]:
     skip = {_key(x) for x in sc.get("skip_categories", [])}
     min_views = sc.get("min_youtube_views", 5000)
     weeks: dict[tuple[str, str], dict] = {}
+    all_titles: dict[str, list[str]] = {}  # 게임별 모든 주의 영상·방송 제목 (로블록스인지 알아볼 때)
+    for t, v in names.items():
+        if v:
+            all_titles.setdefault(_key(v.split("\t")[0]), []).append(t)
     for r in snaps:
         if r["kind"] not in ("title", "yt"):
             continue
@@ -369,7 +373,7 @@ def collect(cfg: dict, top: int = 25) -> list[dict]:
                 if len(g["ytch"]) < 2:
                     continue  # 스팀에 없는데 한 채널만 올린 건 그 스트리머 컨텐츠일 때가 많아서 뺌
                 rb = None
-                if re.search(r"(?i)로블록스|roblox|로블", " ".join(v["title"] for v in vids)):
+                if re.search(r"(?i)로블록스|roblox|로블", " ".join(all_titles.get(_key(g["name"]), []))):
                     rb = roblox_lookup(g["en"] or g["name"], steam_cache) or (roblox_lookup(g["name"], steam_cache) if g["en"] else None)
                 if rb:  # 로블록스 게임 페이지
                     url, desc, shots = rb["url"], "로블록스 게임. " + rb["desc"], rb.get("images", [])
