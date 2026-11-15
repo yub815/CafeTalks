@@ -361,7 +361,8 @@ function steamSearch(q, have){
     box.innerHTML = '<div class="meta">스팀에서 찾는 중...</div>';
     try{
       const d = await (await fetch(PROXY + '/search?q=' + encodeURIComponent(q))).json();
-      const items = (d.items || []).filter(x => !have.has(`https://store.steampowered.com/app/${x.id}/`));
+      const items = (d.items || []).filter(x => !have.has(`https://store.steampowered.com/app/${x.id}/`)
+        && !/soundtrack|\bost\b|\bdlc\b|pack|artbook|사운드트랙/i.test(x.name));
       box.innerHTML = items.length ? '<div class="meta" style="margin:8px 0 4px">스팀에서 찾음</div>' + items.map(x => `<div class="gres">
           <img src="${esc(x.img)}" loading="lazy"><div style="flex:1"><b>${esc(x.name)}</b><div class="meta">스팀</div></div>
           <button class="b" data-sid="${x.id}">추가</button></div>`).join('') : '';

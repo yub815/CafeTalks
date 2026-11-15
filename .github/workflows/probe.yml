@@ -1,9 +1,0 @@
-name: probe
-on: workflow_dispatch
-jobs:
-  p:
-    runs-on: ubuntu-latest
-    steps:
-      - run: |
-          curl -sS -m 20 -D - -H "Origin: https://yub815.github.io" "https://steam-search.yub815.workers.dev/search?q=%ED%8C%8C%EB%A9%B8%EC%9D%98%20%EC%98%A4%ED%83%80%EC%BF%A0" | head -c 900; echo
-          curl -sS -m 20 "https://steam-search.yub815.workers.dev/app?id=3318210" | head -c 900; echo
