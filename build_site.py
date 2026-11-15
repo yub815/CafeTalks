@@ -294,11 +294,15 @@ def export() -> None:
     except (FileNotFoundError, json.JSONDecodeError):
         cache = {}
     for cat, conf in cfg.get("categories", {}).items():
-        todo = [it for it in out if it["category"] == cat and it["url"] not in cache]
+        todo = [it for it in out if it["category"] == cat and it["url"] not in cache
+                and not it["source"].startswith("IMDb")]  # 평점 회차는 코멘트 없이 제목·화수·평점만
         written = llm_dedupe.write_comments(cat, conf.get("style", "block"), todo)
         for i, w in written.items():
             cache[todo[i]["url"]] = w
     for it in out:
+        if it["source"].startswith("IMDb"):
+            it["comment"] = ""
+            continue
         w = cache.get(it["url"])
         if w and it["category"] != "유머":
             if not it["source"].startswith("IMDb"):  # 평점 회차는 "★9.9 제목 N화" 그대로

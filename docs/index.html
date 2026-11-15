@@ -209,8 +209,13 @@ function buildRoundup(){
   const title = conf.title.replace('{month}', m).replace('{week}', w);
   const parts = conf.intro ? [linesHtml(conf.intro), '<p>&nbsp;</p>'] : [];
   const files = [];
+  let imdbNote = false;
   ids.forEach((id, k) => {
     const it = byId(id);
+    if(it.source.startsWith('IMDb') && !imdbNote){  // 평점 회차 앞에 한 번만 설명
+      imdbNote = true;
+      parts.push('<p style="text-align:center"><b>이번 주 최고 평점 에피소드</b></p><p style="text-align:center">(IMDb 평점 기준)</p><p>&nbsp;</p>');
+    }
     const chosen = [...document.querySelectorAll('.img' + id + ':checked')].map(c => it.images[+c.value]);
     const imgs = chosen.length ? chosen : it.images.slice(0, 1);
     const heading = $('#h' + id).value, comment = $('#t' + id).value;
@@ -220,7 +225,7 @@ function buildRoundup(){
       parts.push(`<p style="text-align:center"><b><i><span style="font-size:16px">${esc(heading)}</span></i></b></p>`);
     }
     imgs.forEach(s => { parts.push(imgTag(s)); files.push(s); });
-    parts.push(linesHtml(comment), '<p>&nbsp;</p><p>&nbsp;</p>');
+    parts.push(comment.trim() ? linesHtml(comment) : '', '<p>&nbsp;</p><p>&nbsp;</p>');
   });
   showPreview(title, parts.join(''), files, ids);
 }

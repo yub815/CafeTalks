@@ -174,7 +174,7 @@ def collect(cfg: dict) -> list[dict]:
         picked.setdefault(wk, []).append({
             "category": ac.get("category", "신작 애니"), "source": "IMDb 회차 평점",
             "url": f"https://www.imdb.com/title/{tc}/#w{wk}",
-            "title": f"★{rating:.1f} {title_ko} {n}화",
+            "title": f"{title_ko} {n}화 ★{rating:.1f}",
             "summary": (f"IMDb 평점 {rating:.1f} ({votes}명 평가). {title_ko} 에피소드 {n}화, "
                         f"{aired.month}월 {aired.day}일 방영. 원제 {m['title']['native']} / "
                         f"{m['title'].get('english') or m['title']['romaji']}"),
