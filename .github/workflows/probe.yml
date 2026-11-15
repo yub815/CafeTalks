@@ -5,7 +5,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - run: |
-          curl -sS "https://store.steampowered.com/api/appdetails?appids=3318210&l=koreana&cc=KR" | python3 -c "
-          import json,sys,re;d=json.load(sys.stdin)['3318210']['data']
-          for k in ('detailed_description','about_the_game'):
-              h=d.get(k,'');print(k,len(h));print(re.findall(r'(?:src|data-src)=\"([^\"]+)\"',h)[:12]);print(h[:600])"
+          B=https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/3318210/extras/2fc6c22ff439969062cb8e0b0c118c7a
+          for e in gif mp4 webm; do echo "== $e"; curl -sS -o /dev/null -w "%{http_code} %{content_type} %{size_download}\n" -H "Origin: https://yub815.github.io" -D h.txt "$B.$e"; grep -i "access-control" h.txt; done
+          which ffmpeg
