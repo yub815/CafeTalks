@@ -1,0 +1,9 @@
+name: probe
+on: workflow_dispatch
+jobs:
+  p:
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          for u in "https://store.steampowered.com/api/storesearch/?term=%ED%8C%8C%EB%A9%B8%EC%9D%98%20%EC%98%A4%ED%83%80%EC%BF%A0&l=koreana&cc=KR" "https://store.steampowered.com/search/suggest?term=otaku&f=games&cc=KR&l=koreana" "https://api.allorigins.win/raw?url=https%3A%2F%2Fstore.steampowered.com%2Fapi%2Fstoresearch%2F%3Fterm%3Dotaku" "https://corsproxy.io/?url=https%3A%2F%2Fstore.steampowered.com%2Fapi%2Fstoresearch%2F%3Fterm%3Dotaku" "https://api.codetabs.com/v1/proxy?quest=https://store.steampowered.com/api/storesearch/?term=otaku" "https://ko.wikipedia.org/w/api.php?action=query&list=search&srsearch=otaku&format=json&origin=*" "https://api.steamapis.com/" "https://www.youtube.com/results?search_query=otaku"; do echo "== $u"; curl -sS -m 15 -D - -o body.txt -H "Origin: https://yub815.github.io" "$u" | grep -i "^HTTP\|access-control-allow-origin"; head -c 300 body.txt; echo; done
+          echo "== steam result"; curl -sS "https://store.steampowered.com/api/storesearch/?term=%ED%8C%8C%EB%A9%B8%EC%9D%98%20%EC%98%A4%ED%83%80%EC%BF%A0&l=koreana&cc=KR" | head -c 800
