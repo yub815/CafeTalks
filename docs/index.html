@@ -55,6 +55,7 @@ textarea{min-height:100px}
 <main id="main"><div class="empty">불러오는 중...</div></main>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 <script>
+const STEAM_PROXY = '';  // 스팀 전체 검색용 Cloudflare Worker 주소 (worker/steam-search.js)
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 let DATA = null, CAT = null, SHOW_USED = false, WEEK = null;
@@ -119,7 +120,8 @@ function renderList(){
     h += `<div class="addbox">
       <div class="bar" style="margin:0"><input type="text" id="gq" placeholder="게임 검색 (한글·영어 이름, 스팀 인기 게임)" style="max-width:420px" autocomplete="off">
         <button class="g" id="manualBtn">목록에 없으면 직접 추가</button></div>
-      <div id="gres"></div>
+      <div id="gres"></div><div id="gres2"></div>
+      <div id="proxyBox" style="margin-top:6px"></div>
       <div id="manual" style="display:none">
         <input type="text" id="mName" placeholder="게임 이름"> <input type="text" id="mUrl" placeholder="링크 (웹게임 주소, 스팀 주소 등)">
         <textarea id="mDesc" placeholder="설명 (코멘트)"></textarea>
@@ -330,9 +332,49 @@ async function setupGameAdd(){
         <img src="${esc(g.images[0] || '')}" loading="lazy"><div style="flex:1"><b>${esc(g.ko || g.en)}</b>${g.ko && g.en && g.ko !== g.en ? ` <span class="meta">${esc(g.en)}</span>` : ''}
         <div class="meta">${esc(g.src)}${g.genres && g.genres.length ? ' · ' + esc(g.genres.join(', ')) : ''}</div></div>
         <button class="b" data-gi="${i}">추가</button></div>`).join('')
-      : '<div class="meta">목록에 없어요. 웹게임이나 덜 알려진 게임은 "목록에 없으면 직접 추가"로 넣어 주세요.</div>';
+      : (PROXY ? '' : '<div class="meta">목록에 없어요. 웹게임이나 덜 알려진 게임은 "목록에 없으면 직접 추가"로 넣어 주세요.</div>');
     box.querySelectorAll('[data-gi]').forEach(b => b.onclick = () => { addCustom(GAMES[+b.dataset.gi]); });
+    steamSearch(q.value.trim(), new Set(hits.map(h => h[2].url)));
   };
+  proxySetup();
+}
+
+// 스팀 전체 검색 (Cloudflare 중계 서버 주소가 있을 때만)
+let PROXY = (() => { try{ return localStorage.getItem('wc_proxy') || STEAM_PROXY; }catch(e){ return STEAM_PROXY; } })();
+function proxySetup(){
+  const el = $('#proxyBox'); if(!el) return;
+  el.innerHTML = PROXY ? `<span class="meta">스팀 전체 검색 켜짐 · <button class="linkbtn" id="pxEdit">서버 주소 바꾸기</button></span>`
+    : `<span class="meta">스팀 전체 검색 서버 주소:</span> <input type="text" id="pxIn" placeholder="https://....workers.dev" style="max-width:300px"> <button class="g" id="pxSave">저장</button>`;
+  if($('#pxEdit')) $('#pxEdit').onclick = () => { PROXY = ''; proxySetup(); };
+  if($('#pxSave')) $('#pxSave').onclick = () => {
+    PROXY = $('#pxIn').value.trim().replace(/\/+$/, '');
+    try{ localStorage.setItem('wc_proxy', PROXY); }catch(e){}
+    proxySetup();
+  };
+}
+let STEAM_T = 0;
+function steamSearch(q, have){
+  clearTimeout(STEAM_T);
+  const box = $('#gres2'); if(!box) return;
+  if(!PROXY || q.length < 2){ box.innerHTML = ''; return; }
+  STEAM_T = setTimeout(async () => {
+    box.innerHTML = '<div class="meta">스팀에서 찾는 중...</div>';
+    try{
+      const d = await (await fetch(PROXY + '/search?q=' + encodeURIComponent(q))).json();
+      const items = (d.items || []).filter(x => !have.has(`https://store.steampowered.com/app/${x.id}/`));
+      box.innerHTML = items.length ? '<div class="meta" style="margin:8px 0 4px">스팀에서 찾음</div>' + items.map(x => `<div class="gres">
+          <img src="${esc(x.img)}" loading="lazy"><div style="flex:1"><b>${esc(x.name)}</b><div class="meta">스팀</div></div>
+          <button class="b" data-sid="${x.id}">추가</button></div>`).join('') : '';
+      box.querySelectorAll('[data-sid]').forEach(b => b.onclick = async () => {
+        b.disabled = true; b.textContent = '불러오는 중';
+        try{
+          const g = await (await fetch(PROXY + '/app?id=' + b.dataset.sid)).json();
+          addCustom({ko: g.name, en: '', url: g.url, desc: g.desc, genres: g.genres,
+                     images: g.images.length ? g.images : (g.header ? [g.header] : []), src: '스팀'});
+        }catch(e){ b.textContent = '실패'; }
+      });
+    }catch(e){ box.innerHTML = '<div class="meta">스팀 검색 서버에 연결이 안 돼요. 주소를 확인해 주세요.</div>'; }
+  }, 400);
 }
 
 async function downloadZip(files, title){
