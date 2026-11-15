@@ -121,7 +121,7 @@ def korean_titles(media: list[dict]) -> dict[str, str]:
                 messages=[{"role": "user", "content":
                     "아래 일본 애니들의 한국어 제목을 적어 주세요. 한국 정식 발매·방영 제목(라프텔·애니플러스 등)이 있으면 그것, "
                     "없으면 한국 팬들이 흔히 부르는 이름. 2기·3기는 '2기'처럼 붙이고, 같은 기의 2쿨은 '2쿨'로. "
-                    "모르면 일본어 제목을 자연스럽게 번역해 주세요.\n\n" + "\n".join(lines)}])
+                    "모르면 일본어 제목을 자연스럽게 번역해 주세요. 한자·가나는 남기지 말고 전부 한글로.\n\n" + "\n".join(lines)}])
             text = next((b.text for b in resp.content if b.type == "text"), "{}")
             for r in json.loads(text).get("items", []):
                 if r.get("ko", "").strip():
@@ -142,7 +142,10 @@ def collect(cfg: dict) -> list[dict]:
     names = {}
     for a in air:
         t = a["media"]["title"]
-        names[a["media"]["id"]] = {_norm(x) for x in (t["romaji"], t.get("english"), t["native"], *(a["media"]["synonyms"] or [])) if x}
+        all_t = [x for x in (t["romaji"], t.get("english"), t["native"], *(a["media"]["synonyms"] or [])) if x]
+        # "JoJo's Bizarre Adventure: Steel Ball Run" 처럼 IMDb엔 앞부분 이름 시리즈로만 있는 경우도 찾게
+        names[a["media"]["id"]] = {_norm(x) for x in all_t} | {
+            _norm(x.split(":")[0]) for x in all_t if ":" in x and len(_norm(x.split(":")[0])) >= 8}
     wanted = set().union(*names.values()) if names else set()
     series, by_series, ep_year, ratings = imdb_index(wanted, datetime.now(collector.KST).year)
     print(f"  [애니 평점] IMDb에서 찾은 애니 {len(series)}개")

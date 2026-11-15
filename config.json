@@ -291,5 +291,12 @@
       "테스트 해보기"
     ],
     "min_youtube_views": 5000
+  },
+  "anime_ratings": {
+    "enabled": true,
+    "category": "신작 애니",
+    "min_popularity": 15000,
+    "min_votes": 30,
+    "per_week": 10
   }
 }

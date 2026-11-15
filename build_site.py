@@ -211,7 +211,7 @@ def rule_dedupe(out: list[dict]) -> list[dict]:
     kept: list[dict] = []
     dropped = 0
     for it in out:
-        if it["category"] == "유머" or it["source"].startswith(("스팀", "치지직", "유튜브")):
+        if it["category"] == "유머" or it["source"].startswith(("스팀", "치지직", "유튜브", "IMDb")):
             kept.append(it)
             continue
         if any(k["category"] == it["category"] and k["week"] == it["week"] and same_item(it, k) for k in kept):
@@ -246,7 +246,7 @@ def export() -> None:
                 keep.add(Path(p).name)
         if not imgs:
             continue
-        game = r["source"].startswith(("스팀", "치지직", "유튜브"))
+        game = r["source"].startswith(("스팀", "치지직", "유튜브", "IMDb"))
         out.append({
             "id": hashlib.sha1(r["url"].encode()).hexdigest()[:12],
             "category": r["category"], "source": r["source"], "url": r["url"],
@@ -281,7 +281,9 @@ def export() -> None:
     merged = []
     for cat in list(cfg.get("categories", {}).keys()) + ["유머"]:
         for wk in sorted({it["week"] for it in out if it["category"] == cat}):
-            merged += llm_dedupe.dedupe(cat, [it for it in out if it["category"] == cat and it["week"] == wk])
+            grp = [it for it in out if it["category"] == cat and it["week"] == wk]
+            rated = [it for it in grp if it["source"].startswith("IMDb")]  # 회차 평점은 소식이랑 안 묶음
+            merged += rated + llm_dedupe.dedupe(cat, [it for it in grp if it not in rated])
     out = merged
     out = check_product_images(out, cfg)
     out = filter_humor(out, cfg)
@@ -299,7 +301,8 @@ def export() -> None:
     for it in out:
         w = cache.get(it["url"])
         if w and it["category"] != "유머":
-            it["heading"] = w["heading"] or it["heading"]
+            if not it["source"].startswith("IMDb"):  # 평점 회차는 "★9.9 제목 N화" 그대로
+                it["heading"] = w["heading"] or it["heading"]
             it["comment"] = w["comment"]
     keep_urls = {it["url"] for it in out if it["category"] != "유머"}
     cache = {u: w for u, w in cache.items() if u in keep_urls}

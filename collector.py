@@ -697,6 +697,19 @@ def main(humor_only: bool = False) -> None:
         con.close()
         return
 
+    # 이번 주 방영한 애니 회차 중 IMDb 평점 높은 회차 (하루 한 번)
+    try:
+        import anime_ratings
+        log("[애니 평점] 수집 중...")
+        got = anime_ratings.collect(cfg)
+        if got:
+            con.execute("DELETE FROM items WHERE source = 'IMDb 회차 평점'")
+        for it in got:
+            upsert(con, it)
+        con.commit()
+    except Exception as e:
+        log(f"  ! 애니 평점 수집 실패: {e}")
+
     # 2) 루리웹 게임 뉴스 (신작 게임 보강)
     for cat, conf in cfg.get("categories", {}).items():
         extra: list[dict] = []
