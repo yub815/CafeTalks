@@ -1,0 +1,11 @@
+name: probe
+on: workflow_dispatch
+jobs:
+  p:
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          curl -sS "https://store.steampowered.com/api/appdetails?appids=3318210&l=koreana&cc=KR" | python3 -c "
+          import json,sys,re;d=json.load(sys.stdin)['3318210']['data']
+          for k in ('detailed_description','about_the_game'):
+              h=d.get(k,'');print(k,len(h));print(re.findall(r'(?:src|data-src)=\"([^\"]+)\"',h)[:12]);print(h[:600])"
