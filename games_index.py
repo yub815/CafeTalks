@@ -58,6 +58,7 @@ def steam_full(appid: str) -> dict | None:
         "ko": d.get("name", ""),
         "desc": BeautifulSoup(d.get("short_description", ""), "html.parser").get_text(" ", strip=True),
         "images": shots or ([d["header_image"]] if d.get("header_image") else []),
+        "videos": collector.steam_videos(d),
         "genres": [g.get("description", "") for g in d.get("genres", [])][:3],
     }
 
@@ -75,7 +76,7 @@ def build(max_details: int = MAX_DETAILS) -> None:
         g = cache.get(appid, {})
         g.update({"en": en or g.get("en", ""), "rank": rank})
         cache[appid] = g
-        if fetched >= max_details or (g.get("t") and now - g["t"] < REFRESH_DAYS * 86400):
+        if fetched >= max_details or (g.get("t") and now - g["t"] < REFRESH_DAYS * 86400 and "videos" in g):
             continue
         info = steam_full(appid)
         if info is None:          # 접속 실패·요청 제한 → 다음에 다시
@@ -94,7 +95,7 @@ def build(max_details: int = MAX_DETAILS) -> None:
         games.append({"id": "steam:" + appid, "en": g.get("en", ""), "ko": g.get("ko", ""),
                       "url": f"https://store.steampowered.com/app/{appid}/",
                       "desc": g.get("desc", ""), "genres": g.get("genres", []),
-                      "images": g.get("images") or [f"https://cdn.akamai.steamstatic.com/steam/apps/{appid}/header.jpg"],
+                      "images": (g.get("videos") or []) + (g.get("images") or [f"https://cdn.akamai.steamstatic.com/steam/apps/{appid}/header.jpg"]),
                       "src": "스팀"})
     OUT.parent.mkdir(parents=True, exist_ok=True)
     OUT.write_text(json.dumps(games, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")

@@ -50,11 +50,40 @@ def crop_black_bars(im):
     return im.crop(box) if box and (box[3] - box[1]) > im.height * 0.4 else im
 
 
+def save_gif(url: str, name: str) -> str | None:
+    """스팀 설명란 움짤(mp4) → GIF (앞 6초, 가로 480px). 카페에 그대로 올릴 수 있게."""
+    import subprocess
+    import tempfile
+    try:
+        import imageio_ffmpeg
+        ffmpeg = imageio_ffmpeg.get_ffmpeg_exe()
+    except Exception:
+        return None
+    got = fetch_image(url)
+    if not got or len(got[0]) > 40 * 1024 * 1024:
+        return None
+    with tempfile.TemporaryDirectory() as tmp:
+        src = Path(tmp) / "in.mp4"
+        src.write_bytes(got[0])
+        for width, fps in ((480, 10), (360, 8)):
+            out = IMG / f"{name}.gif"
+            vf = (f"fps={fps},scale={width}:-1:flags=lanczos,split[a][b];"
+                  "[a]palettegen=max_colors=128[p];[b][p]paletteuse=dither=bayer")
+            r = subprocess.run([ffmpeg, "-y", "-loglevel", "error", "-t", "6", "-i", str(src), "-vf", vf, "-loop", "0", str(out)],
+                               capture_output=True, timeout=120)
+            if r.returncode == 0 and out.exists() and out.stat().st_size <= MAX_IMG_BYTES:
+                return f"img/{name}.gif"
+            out.unlink(missing_ok=True)
+    return None
+
+
 def save_image(url: str) -> str | None:
     name = hashlib.sha1(url.encode()).hexdigest()[:16]
     for ext in (".jpg", ".png", ".gif", ".webp", ".mp4"):
         if (IMG / f"{name}{ext}").exists():
             return f"img/{name}{ext}"
+    if "/extras/" in url and url.endswith(".mp4"):
+        return save_gif(url, name)
     got = fetch_image(url)
     if not got:
         return None

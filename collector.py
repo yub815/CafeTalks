@@ -546,6 +546,16 @@ def is_controversial(title: str, words: list[str]) -> bool:
 
 
 # ---------------------------------------------------------------- 게임 추천 (스팀)
+def steam_videos(d: dict, limit: int = 2) -> list[str]:
+    """스팀 설명란의 움짤(원래 GIF, 스팀이 mp4로 바꿔 둠) 주소. 사이트에 올릴 때 GIF로 다시 바꿈."""
+    html_ = d.get("about_the_game") or d.get("detailed_description") or ""
+    out: list[str] = []
+    for u in re.findall(r'src="(https://[^"]+/extras/[^"]+\.mp4)[^"]*"', html_):
+        if u not in out:
+            out.append(u)
+    return out[:limit]
+
+
 def steam_details(appid: str) -> dict:
     r = get(f"https://store.steampowered.com/api/appdetails?appids={appid}&l=koreana&cc=kr")
     try:
@@ -554,7 +564,7 @@ def steam_details(appid: str) -> dict:
         d = {}
     shots = [x.get("path_full") for x in d.get("screenshots", [])[:3] if x.get("path_full")]
     return {"summary": BeautifulSoup(d.get("short_description", ""), "html.parser").get_text(" ", strip=True),
-            "images": shots or ([d["header_image"]] if d.get("header_image") else [])}
+            "images": steam_videos(d) + (shots or ([d["header_image"]] if d.get("header_image") else []))}
 
 
 def collect_steam(cat: str, conf: dict, since_days: int) -> list[dict]:

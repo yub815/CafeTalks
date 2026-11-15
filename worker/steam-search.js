@@ -35,14 +35,24 @@ export default {
         if (!id) return json({ error: "id" }, 400);
         const r = await fetch(`https://store.steampowered.com/api/appdetails?appids=${id}&l=koreana&cc=KR`);
         const d = ((await r.json())[id] || {}).data || {};
+        // 설명란 움짤 (스팀이 GIF를 mp4로 바꿔 둠) → 사이트에서 GIF로 바꿔서 받음
+        const html = d.about_the_game || d.detailed_description || "";
+        const videos = [...new Set([...html.matchAll(/src="(https:\/\/[^"]+\/extras\/[^"?]+\.mp4)/g)].map(m => m[1]))].slice(0, 2);
         return json({
           id, name: d.name || "",
           desc: (d.short_description || "").replace(/<[^>]+>/g, "").trim(),
           genres: (d.genres || []).map(g => g.description),
           images: (d.screenshots || []).slice(0, 4).map(s => s.path_full).concat(d.header_image ? [] : []),
           header: d.header_image || "",
+          videos,
           url: `https://store.steampowered.com/app/${id}/`,
         });
+      }
+      if (url.pathname === "/media") {  // 스팀 움짤 파일 중계 (사이트에서 GIF로 바꾸려고)
+        const u = new URL(url.searchParams.get("u") || "");
+        if (!u.hostname.endsWith("steamstatic.com")) return json({ error: "host" }, 400);
+        const r = await fetch(u.toString());
+        return new Response(r.body, { status: r.status, headers: { ...cors, "Content-Type": r.headers.get("Content-Type") || "video/mp4" } });
       }
       if (url.pathname === "/write" && req.method === "POST") {
         if (!ALLOW.includes(origin)) return json({ error: "origin" }, 403);

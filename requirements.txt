@@ -3,3 +3,4 @@ beautifulsoup4>=4.12
 flask>=3.0
 pillow>=10.0
 anthropic>=2.0
+imageio-ffmpeg>=0.5

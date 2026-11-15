@@ -237,7 +237,7 @@ def steam_lookup(name: str, cache: dict) -> dict | None:
         games = []
     for g in games:
         if g.get("src") == "스팀" and k in (_key(g.get("ko", "")), _key(g.get("en", ""))):
-            cache[k] = {"url": g["url"], "desc": g.get("desc", ""), "images": g.get("images", [])[:2]}
+            cache[k] = {"url": g["url"], "desc": g.get("desc", ""), "images": g.get("images", [])[:4]}
             return cache[k]
     r = collector.get(f"https://store.steampowered.com/api/storesearch/?term={quote(name)}&l=koreana&cc=KR")
     found = None
@@ -251,7 +251,7 @@ def steam_lookup(name: str, cache: dict) -> dict | None:
             if xk and (xk == k or (len(k) >= 4 and _key(nm.split(":")[0]) == k)):
                 det = collector.steam_details(str(x["id"]))
                 found = {"url": f"https://store.steampowered.com/app/{x['id']}/", "desc": det.get("summary", ""),
-                         "images": det.get("images", [])[:2]}
+                         "images": det.get("images", [])[:4]}
                 break
     except (ValueError, KeyError):
         pass

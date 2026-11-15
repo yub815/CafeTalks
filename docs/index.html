@@ -103,7 +103,7 @@ function rows(){
 
 function media(src, cls=''){
   if(!src) return `<div class="meta" style="width:180px;height:130px;display:flex;align-items:center;justify-content:center;border:1px dashed var(--line);border-radius:8px">사진 없음</div>`;
-  return src.endsWith('.mp4') ? `<video src="${esc(src)}" muted class="${cls}"></video>` : `<img loading="lazy" src="${esc(src)}" class="${cls}">`;
+  return src.endsWith('.mp4') ? `<video src="${esc(src)}" muted autoplay loop playsinline class="${cls}"></video>` : `<img loading="lazy" src="${esc(src)}" class="${cls}">`;
 }
 
 function renderList(){
@@ -179,7 +179,7 @@ function renderList(){
 const byId = id => allItems().find(x => x.id === id);
 const linesHtml = t => (t || '').split('\n').map(l => `<p>${l.trim() ? esc(l) : '&nbsp;'}</p>`).join('');
 function imgTag(src){
-  if(src.endsWith('.mp4')) return `<p style="text-align:center;color:#999">[영상 첨부: 사진 받기 파일에 포함]</p>`;
+  if(src.endsWith('.mp4')) return `<p style="text-align:center;color:#999">[${/steamstatic/.test(src) ? 'GIF' : '영상'} 첨부: 사진 받기 파일에 포함]</p>`;
   return `<p style="text-align:center"><img src="${esc(abs(src))}" style="max-width:100%;width:640px"></p>`;
 }
 
@@ -384,11 +384,29 @@ function steamSearch(q, have){
         try{
           const g = await (await fetch(PROXY + '/app?id=' + b.dataset.sid)).json();
           addCustom({ko: g.name, en: '', url: g.url, desc: g.desc, genres: g.genres,
-                     images: g.images.length ? g.images : (g.header ? [g.header] : []), src: '스팀'});
+                     images: (g.videos || []).concat(g.images.length ? g.images : (g.header ? [g.header] : [])), src: '스팀'});
         }catch(e){ b.textContent = '실패'; }
       });
     }catch(e){ box.innerHTML = '<div class="meta">스팀 검색 서버에 연결이 안 돼요. 주소를 확인해 주세요.</div>'; }
   }, 400);
+}
+
+// 스팀 설명란 움짤(mp4) → GIF (앞 6초, 가로 480px, 초당 10장)
+async function mp4ToGif(blob){
+  const {GIFEncoder, quantize, applyPalette} = await import('./lib/gifenc.esm.js');
+  const v = document.createElement('video'); v.muted = true; v.playsInline = true; v.src = URL.createObjectURL(blob);
+  await new Promise((ok, bad) => { v.onloadeddata = ok; v.onerror = bad; });
+  const w = Math.min(480, v.videoWidth), h = Math.round(v.videoHeight * w / v.videoWidth);
+  const c = document.createElement('canvas'); c.width = w; c.height = h; const ctx = c.getContext('2d', {willReadFrequently: true});
+  const enc = GIFEncoder(), dur = Math.min(6, v.duration || 6);
+  for(let t = 0; t < dur; t += 0.1){
+    v.currentTime = t; await new Promise(ok => { v.onseeked = ok; });
+    ctx.drawImage(v, 0, 0, w, h);
+    const px = ctx.getImageData(0, 0, w, h).data, pal = quantize(px, 128);
+    enc.writeFrame(applyPalette(px, pal), w, h, {palette: pal, delay: 100});
+  }
+  enc.finish(); URL.revokeObjectURL(v.src);
+  return new Blob([enc.bytes()], {type: 'image/gif'});
 }
 
 async function downloadZip(files, title){
@@ -398,8 +416,12 @@ async function downloadZip(files, title){
   let n = 0;
   for(const f of files){
     try{
-      const r = await fetch(f); if(!r.ok) continue;
-      const b = await r.blob(); const ext = ({'image/png': '.png', 'image/gif': '.gif', 'image/webp': '.webp', 'video/mp4': '.mp4'})[b.type] || '.jpg';
+      const steamVid = /steamstatic\.com\/.*\.mp4$/.test(f);
+      if(steamVid && !PROXY) continue;
+      const r = await fetch(steamVid ? PROXY + '/media?u=' + encodeURIComponent(f) : f); if(!r.ok) continue;
+      let b = await r.blob();
+      if(steamVid){ flash('움짤을 GIF로 바꾸는 중... (' + (n + 1) + '번째)'); b = await mp4ToGif(b); }
+      const ext = ({'image/png': '.png', 'image/gif': '.gif', 'image/webp': '.webp', 'video/mp4': '.mp4'})[b.type] || '.jpg';
       n++; zip.file(String(n).padStart(2, '0') + ext, b);
     }catch(e){ /* 다른 사이트 사진은 막혀 있으면 건너뜀 */ }
   }
