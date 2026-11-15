@@ -43,7 +43,8 @@ textarea{min-height:100px}
 .gres img{width:120px;height:56px;object-fit:cover;border-radius:6px;background:#000}
 .empty{color:var(--muted);padding:40px;text-align:center}
 .note{background:#2a2410;border:1px solid #5a4a14;color:#ffd77a;border-radius:8px;padding:10px 14px;margin:10px 0;font-size:14px}
-.preview{background:#000;border:1px solid var(--line);border-radius:12px;padding:24px;max-width:860px}
+.preview{background:#fff;color:#000;border:1px solid var(--line);border-radius:12px;padding:24px;max-width:860px}
+.preview a{color:#0068c3}
 .preview img{max-width:100%}
 .linkbtn{background:none;border:0;color:var(--muted);cursor:pointer;font-size:13px;padding:0;text-decoration:underline}
 @media (max-width:700px){.card{grid-template-columns:24px 1fr}.pic{grid-column:2}.pic img{width:100%;height:auto}.thumbs.big img,.thumbs.big video{width:calc(50vw - 40px);height:auto;aspect-ratio:4/3}}
@@ -244,15 +245,31 @@ function showPreview(title, body, files, ids){
   $('#dlImgs').onclick = () => downloadZip(files, $('#ptitle').value);
 }
 
+// 카페 에디터에 붙였을 때 글씨가 흐리게(사이트 글자색) 나오지 않게, 모든 글에 검은색을 직접 넣음
+function cafeClone(src){
+  const el = src.cloneNode(true);
+  el.querySelectorAll('p, span, b, i, div, font').forEach(n => {
+    const m = (n.style.color || '').match(/\d+/g);
+    // 색이 없거나 밝은 색(어두운 화면에서 쓰던 글자색)이면 검은색으로. 출처 같은 회색은 그대로
+    if(!n.style.color || /var\(/.test(n.style.color) || (m && Math.min(+m[0], +m[1], +m[2]) >= 170)) n.style.color = '#000000';
+    n.style.backgroundColor = '';
+  });
+  return el;
+}
+
 async function copyPost(){
-  const el = $('#post');
+  const el = cafeClone($('#post'));
   try{
     await navigator.clipboard.write([new ClipboardItem({
       'text/html': new Blob([el.innerHTML], {type: 'text/html'}),
       'text/plain': new Blob([el.innerText], {type: 'text/plain'})})]);
   }catch(e){
-    const r = document.createRange(); r.selectNodeContents(el);
+    const box = document.createElement('div');
+    box.style.cssText = 'position:fixed;left:-9999px;top:0;background:#fff;color:#000';
+    box.innerHTML = el.innerHTML; document.body.appendChild(box);
+    const r = document.createRange(); r.selectNodeContents(box);
     const s = getSelection(); s.removeAllRanges(); s.addRange(r); document.execCommand('copy'); s.removeAllRanges();
+    box.remove();
   }
   markUsed();
   flash('복사됐어요! 카페 본문에 Ctrl+V');
@@ -260,7 +277,7 @@ async function copyPost(){
 
 async function copyTextOnly(){
   // 사진 대신 [사진 01] 표시를 넣은 글만 복사 → 사진은 '사진 한 번에 받기'로 받은 순서대로 넣기
-  const el = $('#post').cloneNode(true);
+  const el = cafeClone($('#post'));
   let n = 0;
   el.querySelectorAll('img, video').forEach(m => { n++; m.replaceWith(document.createTextNode('[사진 ' + String(n).padStart(2, '0') + ']')); });
   const html = el.innerHTML;
