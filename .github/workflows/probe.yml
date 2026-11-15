@@ -5,12 +5,13 @@ jobs:
     if: contains(github.event.head_commit.message, 'probe')
     runs-on: ubuntu-latest
     steps:
-      - run: |
+      - shell: bash {0}
+        run: |
           UA='Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0 Safari/537.36'
           for u in \
             'https://cu.bgfretail.com/product/product.do?category=product&depth2=4&sf=N' \
             'https://cu.bgfretail.com/product/productAjax.do' \
-            'http://gs25.gsretail.com/gscvs/ko/products/youus-freshfood' \
+            'http://gs25.gsretail.com/gscvs/ko/products/youus-freshfood-search?CSRFToken=x' \
             'https://www.7-eleven.co.kr/product/presentList.asp' \
             'https://www.7-eleven.co.kr/product/7prodList.asp' \
             'https://www.7-eleven.co.kr/event/eventList.asp' \
