@@ -703,7 +703,7 @@ def main(humor_only: bool = False) -> None:
         log("[애니 평점] 수집 중...")
         got = anime_ratings.collect(cfg)
         if got:
-            con.execute("DELETE FROM items WHERE source = 'IMDb 회차 평점'")
+            con.execute("DELETE FROM items WHERE source IN ('IMDb 회차 평점', 'IMDb 작품 평점')")
         for it in got:
             upsert(con, it)
         con.commit()

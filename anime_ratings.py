@@ -133,12 +133,17 @@ def korean_titles(media: list[dict]) -> dict[str, str]:
 
 
 def collect(cfg: dict) -> list[dict]:
+    """지난달 방영한 메이저 애니: 회차 평점 TOP + 작품 종합(그 달 회차 평균) TOP. 한 달에 한 번 올리는 글용."""
     ac = cfg.get("anime_ratings", {})
     if not ac.get("enabled", True):
         return []
-    weeks = cfg.get("keep_weeks", 5)
-    air = airings(weeks * 7 + 1, ac.get("min_popularity", 15000))
-    print(f"  [애니 평점] AniList 방영 기록 {len(air)}개")
+    now = datetime.now(collector.KST)
+    start = (now.replace(day=1) - timedelta(days=1)).replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+    end = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+    month = f"{start.year}-{start.month:02d}"
+    air = [a for a in airings((now - start).days + 1, ac.get("min_popularity", 30000))
+           if start.timestamp() <= a["airingAt"] < end.timestamp()]
+    print(f"  [애니 평점] {month} 방영 기록 {len(air)}개")
     names = {}
     for a in air:
         t = a["media"]["title"]
@@ -147,12 +152,12 @@ def collect(cfg: dict) -> list[dict]:
         names[a["media"]["id"]] = {_norm(x) for x in all_t} | {
             _norm(x.split(":")[0]) for x in all_t if ":" in x and len(_norm(x.split(":")[0])) >= 8}
     wanted = set().union(*names.values()) if names else set()
-    series, by_series, ep_year, ratings = imdb_index(wanted, datetime.now(collector.KST).year)
+    series, by_series, ep_year, ratings = imdb_index(wanted, now.year)
     print(f"  [애니 평점] IMDb에서 찾은 애니 {len(series)}개")
     ko = korean_titles(list({a["media"]["id"]: a["media"] for a in air}.values()))
-    min_votes = ac.get("min_votes", 30)
-    per_week = ac.get("per_week", 10)
-    picked: dict[str, list[dict]] = {}
+    min_votes = ac.get("min_votes", 50)
+    top = ac.get("top", 10)
+    eps, by_media = [], {}
     for a in air:
         m, n = a["media"], a["episode"]
         aired = datetime.fromtimestamp(a["airingAt"], collector.KST)
@@ -161,34 +166,52 @@ def collect(cfg: dict) -> list[dict]:
             for sid in series.get(t, ()):
                 for season, epn, tc in by_series.get(sid, []):
                     if epn == n and ep_year.get(tc) in (aired.year, aired.year - 1) and tc in ratings:
-                        cands.append((season, ep_year[tc], tc))
+                        cands.append((season, ep_year[tc], tc, sid))
         if not cands:
             continue
-        _, _, tc = max(cands)  # 가장 최근 시즌의 그 화
+        _, _, tc, sid = max(cands)  # 가장 최근 시즌의 그 화
         rating, votes = ratings[tc]
         if votes < min_votes:
             continue
-        wk = build_site.week_of(aired.isoformat())
         title_ko = ko.get(str(m["id"])) or m["title"].get("english") or m["title"]["romaji"]
         imgs = [u for u in (m.get("bannerImage"), (m.get("coverImage") or {}).get("extraLarge")) if u]
-        picked.setdefault(wk, []).append({
-            "category": ac.get("category", "신작 애니"), "source": "IMDb 회차 평점",
-            "url": f"https://www.imdb.com/title/{tc}/#w{wk}",
-            "title": f"{title_ko} {n}화 ★{rating:.1f}",
-            "summary": (f"IMDb 평점 {rating:.1f} ({votes}명 평가). {title_ko} 에피소드 {n}화, "
-                        f"{aired.month}월 {aired.day}일 방영. 원제 {m['title']['native']} / "
-                        f"{m['title'].get('english') or m['title']['romaji']}"),
-            "images": imgs, "views": votes, "score": 1000 + rating * 10,  # 애니 소식보다 위, 평점 순
-            "posted_at": aired.isoformat(),
-        })
+        if not imgs:
+            continue
+        e = {"m": m, "n": n, "tc": tc, "sid": sid, "rating": rating, "votes": votes, "ko": title_ko, "imgs": imgs}
+        eps.append(e)
+        by_media.setdefault(m["id"], []).append(e)
+    cat = ac.get("category", "애니 평점")
+    posted = now.isoformat()  # 이번 주 목록에 보이게 (매일 다시 계산)
+    orig = lambda m: f"원제 {m['title']['native']} / {m['title'].get('english') or m['title']['romaji']}"
     items = []
-    for wk, lst in picked.items():
-        lst.sort(key=lambda x: -x["score"])
-        items += [x for x in lst if x["images"] and build_site.save_image(x["images"][0])][:per_week]
-    print(f"  [애니 평점] 평점 붙은 회차 {sum(len(v) for v in picked.values())}개 → {len(items)}개")
+    for e in sorted(eps, key=lambda e: (-e["rating"], -e["votes"]))[:top]:
+        items.append({
+            "category": cat, "source": "IMDb 회차 평점",
+            "url": f"https://www.imdb.com/title/{e['tc']}/#m{month}",
+            "title": f"{e['ko']} {e['n']}화 ★{e['rating']:.1f}",
+            "summary": f"IMDb 평점 {e['rating']:.1f} ({e['votes']}명 평가). {orig(e['m'])}",
+            "images": e["imgs"], "views": e["votes"], "score": 3000 + e["rating"] * 10, "posted_at": posted,
+        })
+    shows = []
+    for lst in by_media.values():
+        if len(lst) >= ac.get("min_episodes", 2):
+            avg = sum(e["rating"] for e in lst) / len(lst)
+            shows.append((avg, sum(e["votes"] for e in lst), lst))
+    for avg, votes, lst in sorted(shows, key=lambda x: (-x[0], -x[1]))[:top]:
+        e = lst[0]
+        rng = f"{min(x['n'] for x in lst)}~{max(x['n'] for x in lst)}화"
+        items.append({
+            "category": cat, "source": "IMDb 작품 평점",
+            "url": f"https://www.imdb.com/title/{e['sid']}/#m{month}",
+            "title": f"{e['ko']} ★{avg:.1f}",
+            "summary": f"{start.month}월 방영 {rng} {len(lst)}개 회차 IMDb 평균 {avg:.2f}. {orig(e['m'])}",
+            "images": e["imgs"], "views": votes, "score": 2000 + avg * 10, "posted_at": posted,
+        })
+    items = [x for x in items if build_site.save_image(x["images"][0])]
+    print(f"  [애니 평점] {month}: 회차 {len(eps)}개 중 TOP {min(top, len(eps))}, 작품 {len(shows)}개 중 TOP {min(top, len(shows))}")
     return items
 
 
 if __name__ == "__main__":
     for it in collect(collector.load_config()):
-        print(it["posted_at"][:10], it["title"], it["views"], it["url"])
+        print(it["source"], it["title"], it["views"], it["summary"][:60])

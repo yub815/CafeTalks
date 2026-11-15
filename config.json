@@ -156,6 +156,10 @@
         "주가",
         "증권"
       ]
+    },
+    "애니 평점": {
+      "title": "[{month}월 애니 평점 순위] 최고 평점 에피소드·작품 TOP 10",
+      "intro": ""
     }
   },
   "humor_sources": {
@@ -294,9 +298,10 @@
   },
   "anime_ratings": {
     "enabled": true,
-    "category": "신작 애니",
-    "min_popularity": 15000,
-    "min_votes": 30,
-    "per_week": 10
+    "category": "애니 평점",
+    "min_popularity": 30000,
+    "min_votes": 50,
+    "min_episodes": 2,
+    "top": 10
   }
 }
