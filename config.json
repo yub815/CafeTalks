@@ -158,7 +158,7 @@
       ]
     },
     "애니 평점": {
-      "title": "[{month}월 애니 평점 순위] 최고 평점 에피소드·작품 TOP 10",
+      "title": "[{month}월 애니 평점 순위] 그 달 방영 회차 평균 TOP 10",
       "intro": ""
     }
   },
@@ -303,6 +303,6 @@
     "min_votes": 50,
     "min_episodes": 2,
     "top": 10,
-    "max_per_show": 1
+    "top_episodes": 3
   }
 }

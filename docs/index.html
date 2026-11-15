@@ -222,8 +222,7 @@ function buildRoundup(){
   ids.forEach((id, k) => {
     const it = byId(id);
     // 평점 순위: 회차·작품 순위 앞에 한 번씩 설명 줄
-    const sec = {'IMDb 회차 평점': ['최고 평점 에피소드', 'IMDb 회차 평점 기준'],
-                 'IMDb 작품 평점': ['작품 종합 평점 순위', '그 달 방영한 회차들의 IMDb 평점 평균']}[it.source];
+    const sec = {'IMDb 작품 평점': ['애니 평점 순위', '그 달 방영한 회차들의 IMDb 평점 평균']}[it.source];
     if(sec && !shown.has(it.source)){
       shown.add(it.source);
       parts.push(`<p style="text-align:center"><b><span style="font-size:19px">${mm ? +mm + '월 ' : ''}${sec[0]}</span></b></p><p style="text-align:center">(${sec[1]})</p><p>&nbsp;</p>`);
@@ -239,6 +238,11 @@ function buildRoundup(){
     imgs.forEach(s => { parts.push(imgTag(s)); files.push(s); });
     parts.push(comment.trim() ? linesHtml(comment) : '', '<p>&nbsp;</p><p>&nbsp;</p>');
   });
+  if(conf.outro){  // 애니 평점: 끝에 최고 평점 에피소드 TOP 3 (글자만)
+    const [head, ...rest] = conf.outro.split('\n');
+    parts.push(`<p style="text-align:center"><b><span style="font-size:19px">${esc(head)}</span></b></p><p style="text-align:center">(IMDb 회차 평점 기준)</p>`
+      + rest.map(l => `<p style="text-align:center">${esc(l)}</p>`).join(''));
+  }
   showPreview(title, parts.join(''), files, ids);
   prepareGifs();
 }

@@ -300,8 +300,8 @@ def export() -> None:
         for i, w in written.items():
             cache[todo[i]["url"]] = w
     for it in out:
-        if it["source"].startswith("IMDb"):
-            it["comment"] = ""
+        if it["source"].startswith("IMDb"):  # 평점 순위: "N화 평점 X점" 줄만
+            it["comment"] = (it.get("summary") or "") if it["source"] == "IMDb 작품 평점" else ""
             continue
         w = cache.get(it["url"])
         if w and it["category"] != "유머":
@@ -316,6 +316,13 @@ def export() -> None:
         it.pop("source_images", None)
     cats = {k: {"title": v.get("title", ""), "intro": v.get("intro", ""), "style": v.get("style", "block")}
             for k, v in cfg.get("categories", {}).items()}
+    try:  # 애니 평점 글 끝에 넣을 최고 평점 에피소드 TOP 3
+        ex = json.loads((BASE / "data" / "anime_extra.json").read_text(encoding="utf-8"))
+        name = cfg.get("anime_ratings", {}).get("category", "애니 평점")
+        if name in cats and ex.get("top_episodes"):
+            cats[name]["outro"] = f"{int(ex['month'][5:])}월 최고 평점 에피소드 TOP {len(ex['top_episodes'])}\n" + "\n".join(ex["top_episodes"])
+    except (FileNotFoundError, json.JSONDecodeError, ValueError):
+        pass
     (DOCS / "data").mkdir(exist_ok=True)
     (DOCS / "data" / "items.json").write_text(json.dumps({
         "updated": datetime.now(collector.KST).isoformat(timespec="minutes"),

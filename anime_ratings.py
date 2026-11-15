@@ -22,6 +22,7 @@ import collector
 
 BASE = Path(__file__).parent
 KO_CACHE = BASE / "data" / "anime_ko.json"
+EXTRA = BASE / "data" / "anime_extra.json"  # 최고 평점 에피소드 TOP 3 (글 끝에 글자로)
 IMDB = "https://datasets.imdbws.com/"
 
 ANILIST_Q = """query($p:Int,$a:Int,$b:Int){Page(page:$p,perPage:50){pageInfo{hasNextPage}
@@ -184,37 +185,31 @@ def collect(cfg: dict) -> list[dict]:
     posted = now.isoformat()  # 이번 주 목록에 보이게 (매일 다시 계산)
     orig = lambda m: f"원제 {m['title']['native']} / {m['title'].get('english') or m['title']['romaji']}"
     items = []
-    per_show: dict[int, int] = {}
-    best = []
-    for e in sorted(eps, key=lambda e: (-e["rating"], -e["votes"])):  # 한 작품이 순위를 다 차지하지 않게
-        if per_show.get(e["m"]["id"], 0) < ac.get("max_per_show", 1) and len(best) < top:
-            per_show[e["m"]["id"]] = per_show.get(e["m"]["id"], 0) + 1
-            best.append(e)
-    for e in best:
-        items.append({
-            "category": cat, "source": "IMDb 회차 평점",
-            "url": f"https://www.imdb.com/title/{e['tc']}/#m{month}",
-            "title": f"{e['ko']} {e['n']}화 ★{e['rating']:.1f}",
-            "summary": f"IMDb 평점 {e['rating']:.1f} ({e['votes']}명 평가). {orig(e['m'])}",
-            "images": e["imgs"], "views": e["votes"], "score": 3000 + e["rating"] * 10, "posted_at": posted,
-        })
+    # 맨 끝에 글자로만 넣는 최고 평점 에피소드 TOP 3 (작품당 1회차)
+    best, seen = [], set()
+    for e in sorted(eps, key=lambda e: (-e["rating"], -e["votes"])):
+        if e["m"]["id"] not in seen and len(best) < ac.get("top_episodes", 3):
+            seen.add(e["m"]["id"])
+            best.append(f"{len(best) + 1}. {e['ko']} {e['n']}화 ★{e['rating']:.1f}")
+    EXTRA.write_text(json.dumps({"month": month, "top_episodes": best}, ensure_ascii=False, indent=1), encoding="utf-8")
+    # 순위: 그 달 방영 회차 평점 평균. 사진 밑에 "N화 평점 X점" 줄
     shows = []
     for lst in by_media.values():
         if len(lst) >= ac.get("min_episodes", 2):
+            lst = sorted({e["n"]: e for e in lst}.values(), key=lambda e: e["n"])
             avg = sum(e["rating"] for e in lst) / len(lst)
             shows.append((avg, sum(e["votes"] for e in lst), lst))
-    for avg, votes, lst in sorted(shows, key=lambda x: (-x[0], -x[1]))[:top]:
+    for rank, (avg, votes, lst) in enumerate(sorted(shows, key=lambda x: (-x[0], -x[1]))[:top], 1):
         e = lst[0]
-        rng = f"{min(x['n'] for x in lst)}~{max(x['n'] for x in lst)}화"
         items.append({
             "category": cat, "source": "IMDb 작품 평점",
             "url": f"https://www.imdb.com/title/{e['sid']}/#m{month}",
-            "title": f"{e['ko']} ★{avg:.1f}",
-            "summary": f"{start.month}월 방영 {rng} {len(lst)}개 회차 IMDb 평균 {avg:.2f}. {orig(e['m'])}",
+            "title": f"{rank}위 {e['ko']} (평균 ★{avg:.1f})",
+            "summary": "\n".join(f"{x['n']}화 평점 {x['rating']:.1f}점" for x in lst),
             "images": e["imgs"], "views": votes, "score": 2000 + avg * 10, "posted_at": posted,
         })
     items = [x for x in items if build_site.save_image(x["images"][0])]
-    print(f"  [애니 평점] {month}: 회차 {len(eps)}개 중 TOP {min(top, len(eps))}, 작품 {len(shows)}개 중 TOP {min(top, len(shows))}")
+    print(f"  [애니 평점] {month}: 작품 {len(shows)}개 중 TOP {len(items)}, 최고 회차 {best}")
     return items
 
 
