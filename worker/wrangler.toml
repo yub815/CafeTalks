@@ -2,3 +2,7 @@
 name = "steam-search"
 main = "steam-search.js"
 compatibility_date = "2025-01-01"
+
+# 직접 추가한 게임의 GIF를 올려두는 저장소 (Cloudflare 무료 KV). 배포할 때 자동으로 만들어짐
+[[kv_namespaces]]
+binding = "GIFS"

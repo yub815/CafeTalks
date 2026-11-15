@@ -18,7 +18,7 @@ export default {
     const url = new URL(req.url);
     const json = (o, s = 200) => new Response(JSON.stringify(o), { status: s, headers: cors });
     try {
-      if (url.pathname === "/ping") return new Response("ok auto-deploy 1");  // 자동 배포 확인용
+      if (url.pathname === "/ping") return new Response("ok auto-deploy 2");  // 자동 배포 확인용
       if (url.pathname === "/search") {
         const q = (url.searchParams.get("q") || "").slice(0, 80);
         if (!q) return json({ items: [] });
@@ -48,6 +48,24 @@ export default {
           videos,
           url: `https://store.steampowered.com/app/${id}/`,
         });
+      }
+      // GIF 보관: 사이트가 브라우저에서 만든 GIF를 올려두면, 카페 글에 이 주소로 붙여 넣어요
+      //   /gif/<이름>.gif  (이름 = 스팀 게임번호_파일이름)
+      if (url.pathname.startsWith("/gif/")) {
+        const key = url.pathname.slice(5).replace(/\.gif$/, "");
+        if (!/^\d+_[\w-]{1,80}$/.test(key)) return json({ error: "key" }, 400);
+        if (!env.GIFS) return json({ error: "no storage" }, 500);
+        if (req.method === "POST") {
+          if (!ALLOW.includes(origin)) return json({ error: "origin" }, 403);
+          const buf = await req.arrayBuffer();
+          const head = new Uint8Array(buf.slice(0, 6));
+          if (buf.byteLength > 20e6 || String.fromCharCode(...head) !== "GIF89a") return json({ error: "gif" }, 400);
+          await env.GIFS.put(key, buf);
+          return json({ ok: true });
+        }
+        const g = await env.GIFS.get(key, "arrayBuffer");
+        if (!g) return new Response("not found", { status: 404, headers: cors });
+        return new Response(g, { headers: { ...cors, "Content-Type": "image/gif", "Cache-Control": "public, max-age=31536000" } });
       }
       if (url.pathname === "/media") {  // 스팀 움짤 파일 중계 (사이트에서 GIF로 바꾸려고)
         const u = new URL(url.searchParams.get("u") || "");
