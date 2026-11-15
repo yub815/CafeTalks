@@ -1,0 +1,17 @@
+name: probe
+on: [push]
+jobs:
+  p:
+    if: contains(github.event.head_commit.message, 'probe')
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          curl -sI https://datasets.imdbws.com/title.ratings.tsv.gz | head -5
+          curl -sI https://datasets.imdbws.com/title.episode.tsv.gz | grep -i length
+          curl -sI https://datasets.imdbws.com/title.basics.tsv.gz | grep -i length
+          curl -sI https://datasets.imdbws.com/title.akas.tsv.gz | grep -i length
+          now=$(date +%s); ago=$((now-8*86400))
+          curl -s https://graphql.anilist.co -H 'Content-Type: application/json' -d "{\"query\":\"{Page(perPage:50){airingSchedules(airingAt_greater:$ago,airingAt_lesser:$now,sort:TIME_DESC){episode airingAt media{title{romaji english native} popularity countryOfOrigin format}}}}\"}" | head -c 3000; echo
+          curl -s -A 'Mozilla/5.0' 'https://api.laftel.net/api/search/v1/keyword/?keyword=Black%20Clover' -H 'laftel: TeJava' | head -c 800; echo
+          curl -s -A 'Mozilla/5.0' 'https://api.laftel.net/api/search/v1/keyword/?keyword=%EB%B8%94%EB%9E%99%20%ED%81%B4%EB%A1%9C%EB%B2%84' -H 'laftel: TeJava' | head -c 800; echo
+          curl -s -o /dev/null -w "imdb page %{http_code}\n" -A 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/130 Safari/537.36' 'https://www.imdb.com/title/tt5626028/episodes/'
