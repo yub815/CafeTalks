@@ -302,6 +302,7 @@
     "min_popularity": 30000,
     "min_votes": 50,
     "min_episodes": 2,
-    "top": 10
+    "top": 10,
+    "max_per_show": 1
   }
 }

@@ -184,7 +184,13 @@ def collect(cfg: dict) -> list[dict]:
     posted = now.isoformat()  # 이번 주 목록에 보이게 (매일 다시 계산)
     orig = lambda m: f"원제 {m['title']['native']} / {m['title'].get('english') or m['title']['romaji']}"
     items = []
-    for e in sorted(eps, key=lambda e: (-e["rating"], -e["votes"]))[:top]:
+    per_show: dict[int, int] = {}
+    best = []
+    for e in sorted(eps, key=lambda e: (-e["rating"], -e["votes"])):  # 한 작품이 순위를 다 차지하지 않게
+        if per_show.get(e["m"]["id"], 0) < ac.get("max_per_show", 1) and len(best) < top:
+            per_show[e["m"]["id"]] = per_show.get(e["m"]["id"], 0) + 1
+            best.append(e)
+    for e in best:
         items.append({
             "category": cat, "source": "IMDb 회차 평점",
             "url": f"https://www.imdb.com/title/{e['tc']}/#m{month}",
