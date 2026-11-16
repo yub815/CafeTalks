@@ -69,13 +69,32 @@ def _lines(name: str):
                 yield line.rstrip("\n").split("\t")
 
 
-def imdb_index(wanted: set[str], year: int):
-    """애니 시리즈(제목 → tconst)와 최근 2년 회차(tconst → 년도)."""
+def id_map() -> dict[int, list[str]]:
+    """AniList 작품 번호 → IMDb 작품 번호 (커뮤니티가 관리하는 애니 ID 대조표, github.com/Fribb/anime-lists)."""
+    try:
+        r = requests.get("https://raw.githubusercontent.com/Fribb/anime-lists/master/anime-list-full.json", timeout=60)
+        r.raise_for_status()
+        out = {}
+        for x in r.json():
+            ids = x.get("imdb_id") or []
+            ids = [ids] if isinstance(ids, str) else ids
+            if x.get("anilist_id") and ids:
+                out[int(x["anilist_id"])] = [i for i in ids if str(i).startswith("tt")]
+        return out
+    except Exception as e:
+        print(f"  ! 애니 ID 대조표 실패: {e}")
+        return {}
+
+
+def imdb_index(wanted: set[str], year: int, wanted_ids: set[str] = frozenset()):
+    """애니 시리즈(제목 → tconst, 'id:tt…' → tconst)와 최근 2년 회차(tconst → 년도)."""
     series: dict[str, set[str]] = {}
     eps: dict[str, int] = {}
     for c in _lines("title.basics.tsv.gz"):
         if len(c) < 9:
             continue
+        if c[0] in wanted_ids and c[1] in ("tvSeries", "tvMiniSeries"):
+            series.setdefault("id:" + c[0], set()).add(c[0])
         if c[1] in ("tvSeries", "tvMiniSeries") and "Animation" in c[8]:
             for t in {_norm(c[2]), _norm(c[3])}:
                 if t in wanted:
@@ -148,51 +167,77 @@ def collect(cfg: dict) -> list[dict]:
         latest[a["media"]["id"]] = max(latest.get(a["media"]["id"], 0), a["episode"])
     air = [a for a in fetched if start.timestamp() <= a["airingAt"] < end.timestamp()]
     print(f"  [애니 평점] {month} 방영 기록 {len(air)}개")
-    names = {}
+    by_mid: dict[int, list[dict]] = {}
     for a in air:
-        t = a["media"]["title"]
-        all_t = [x for x in (t["romaji"], t.get("english"), t["native"], *(a["media"]["synonyms"] or [])) if x]
-        # "JoJo's Bizarre Adventure: Steel Ball Run" 처럼 IMDb엔 앞부분 이름 시리즈로만 있는 경우도 찾게
-        names[a["media"]["id"]] = {_norm(x) for x in all_t} | {
-            _norm(x.split(":")[0]) for x in all_t if ":" in x and len(_norm(x.split(":")[0])) >= 8}
-    wanted = set().union(*names.values()) if names else set()
-    series, by_series, ep_year, ratings = imdb_index(wanted, now.year)
-    print(f"  [애니 평점] IMDb에서 찾은 애니 {len(series)}개")
-    ko = korean_titles(list({a["media"]["id"]: a["media"] for a in air}.values()))
+        by_mid.setdefault(a["media"]["id"], []).append(a)
+    idmap = id_map()
+    exact, prefix = {}, {}
+    for mid, lst in by_mid.items():
+        m = lst[0]["media"]
+        t = m["title"]
+        all_t = [x for x in (t["romaji"], t.get("english"), t["native"], *(m["synonyms"] or [])) if x]
+        exact[mid] = {_norm(x) for x in all_t} | {"id:" + i for i in idmap.get(mid, [])}
+        # "JoJo's Bizarre Adventure: Steel Ball Run" 처럼 IMDb엔 앞부분 이름으로만 있는 경우 (정확한 이름이 없을 때만 씀)
+        prefix[mid] = {_norm(x.split(":")[0]) for x in all_t if ":" in x and len(_norm(x.split(":")[0])) >= 8}
+    wanted = set().union(*exact.values(), *prefix.values()) if exact else set()
+    wanted_ids = {i for mid in by_mid for i in idmap.get(mid, [])}
+    series, by_series, ep_year, ratings = imdb_index(wanted, now.year, wanted_ids)
+    print(f"  [애니 평점] IMDb에서 찾은 애니 {len(series)}개 (ID 대조표 {len(wanted_ids)}개)")
+    ko = korean_titles([lst[0]["media"] for lst in by_mid.values()])
     min_votes = ac.get("min_votes", 50)
-    top = ac.get("top", 10)
-    eps, by_media = [], {}
-    for a in air:
-        m, n = a["media"], a["episode"]
-        aired = datetime.fromtimestamp(a["airingAt"], collector.KST)
-        cands = []
-        for t in names[m["id"]]:
-            for sid in series.get(t, ()):
-                recent = [(se, epn, tc) for se, epn, tc in by_series.get(sid, [])
-                          if ep_year.get(tc) in (aired.year, aired.year - 1)]
-                if not recent:
-                    continue
-                season = max(se for se, _, _ in recent)
-                rated = [epn for se, epn, tc in recent if se == season and tc in ratings]
-                # 2기·2쿨을 AniList는 1화부터, IMDb는 앞 시즌에 이어서 셀 때가 있어서 화수 차이를 맞춤
-                # (IMDb에 평점 붙은 마지막 화가 AniList 최신화보다 크면 그만큼 밀려 있는 것)
-                off = max(0, max(rated, default=0) - latest.get(m["id"], n))
-                for se, epn, tc in recent:
-                    if se == season and epn == n + off and tc in ratings:
-                        cands.append((season, ep_year[tc], tc, sid, epn))
-        if not cands:
+    top = ac.get("top", 30)
+    eps, by_media, notes = [], {}, {}
+
+    def try_series(sid, mid, lst):
+        """그 IMDb 작품에서 이번 달 방영분과 맞는 회차들. (맞은 회차 목록, 화수 차이)"""
+        yr = datetime.fromtimestamp(lst[0]["airingAt"], collector.KST).year
+        recent = [(se, epn, tc) for se, epn, tc in by_series.get(sid, []) if ep_year.get(tc) in (yr, yr - 1)]
+        if not recent:
+            return [], 0
+        season = max(se for se, _, _ in recent)
+        rated = [epn for se, epn, tc in recent if se == season and tc in ratings]
+        # 2기·2쿨을 AniList는 1화부터, IMDb는 앞 시즌에 이어서 셀 때가 있어서 화수 차이를 맞춤
+        # (IMDb에 평점 붙은 마지막 화가 AniList 최신화보다 크면 그만큼 밀려 있는 것)
+        off = max(0, max(rated, default=0) - latest.get(mid, 0))
+        idx = {epn: tc for se, epn, tc in recent if se == season and tc in ratings}
+        return [(a, a["episode"] + off, idx[a["episode"] + off]) for a in lst if a["episode"] + off in idx], off
+
+    for mid, lst in by_mid.items():
+        m = lst[0]["media"]
+        mapped = {"id:" + i for i in idmap.get(mid, [])}
+        keys = exact[mid] if any(k in series for k in exact[mid]) else prefix[mid]
+        tried = []
+        for k in keys:
+            for sid in series.get(k, ()):
+                got, off = try_series(sid, mid, lst)
+                if got:
+                    tried.append((len(got), ("id:" + sid) in mapped, sid, got, off))
+        if not tried:
             continue
-        _, _, tc, sid, n = max(cands)  # 가장 최근 시즌의 그 화 (화수는 IMDb 기준: 이어서 세는 작품은 이어진 번호로)
-        rating, votes = ratings[tc]
-        if votes < min_votes:
-            continue
-        title_ko = ko.get(str(m["id"])) or m["title"].get("english") or m["title"]["romaji"]
+        tried.sort(key=lambda x: (-x[0], not x[1]))  # 맞는 회차가 많은 쪽, 같으면 대조표에 있는 쪽
+        _, in_map, sid, got, off = tried[0]
+        note = []
+        if keys is prefix[mid]:
+            note.append("제목 일부로만 찾음")
+        if mapped and not in_map:
+            note.append("ID 대조표와 다른 IMDb 작품")
+        if len({t[2] for t in tried if t[0] == tried[0][0]}) > 1:
+            note.append("IMDb에 비슷한 작품이 여러 개")
+        if off:
+            note.append(f"IMDb가 화수를 이어서 셈 (방영 {lst[0]['episode']}화 = IMDb {lst[0]['episode'] + off}화)")
+        title_ko = ko.get(str(mid)) or m["title"].get("english") or m["title"]["romaji"]
         imgs = [u for u in (m.get("bannerImage"), (m.get("coverImage") or {}).get("extraLarge")) if u]
         if not imgs:
             continue
-        e = {"m": m, "n": n, "tc": tc, "sid": sid, "rating": rating, "votes": votes, "ko": title_ko, "imgs": imgs}
-        eps.append(e)
-        by_media.setdefault(m["id"], []).append(e)
+        for a, n, tc in got:
+            rating, votes = ratings[tc]
+            if votes < min_votes:
+                continue
+            e = {"m": m, "n": n, "tc": tc, "sid": sid, "rating": rating, "votes": votes, "ko": title_ko, "imgs": imgs}
+            eps.append(e)
+            by_media.setdefault(mid, []).append(e)
+        if note:
+            notes[f"https://www.imdb.com/title/{sid}/#m{month}"] = " · ".join(note)
     cat = ac.get("category", "애니 평점")
     posted = now.isoformat()  # 이번 주 목록에 보이게 (매일 다시 계산)
     orig = lambda m: f"원제 {m['title']['native']} / {m['title'].get('english') or m['title']['romaji']}"
@@ -203,7 +248,8 @@ def collect(cfg: dict) -> list[dict]:
         if e["m"]["id"] not in seen and len(best) < ac.get("top_episodes", 3):
             seen.add(e["m"]["id"])
             best.append(f"{len(best) + 1}. {e['ko']} {e['n']}화 ★{e['rating']:.1f}")
-    EXTRA.write_text(json.dumps({"month": month, "top_episodes": best}, ensure_ascii=False, indent=1), encoding="utf-8")
+    EXTRA.write_text(json.dumps({"month": month, "top_episodes": best, "notes": notes}, ensure_ascii=False, indent=1),
+                     encoding="utf-8")
     # 순위: 그 달 방영 회차 평점 평균. 사진 밑에 "N화 평점 X점" 줄
     shows = []
     for lst in by_media.values():
@@ -219,7 +265,7 @@ def collect(cfg: dict) -> list[dict]:
         items.append({
             "category": cat, "source": "IMDb 작품 평점",
             "url": f"https://www.imdb.com/title/{e['sid']}/#m{month}",
-            "title": f"{rank}위 {e['ko']} (평균 ★{avg:.1f})",
+            "title": f"{e['ko']} (평균 ★{avg:.1f})",  # 'N위'는 사이트에서 고른 순서대로 붙임
             "summary": "\n".join(f"{x['n']}화 평점 {x['rating']:.1f}점" for x in lst),
             "images": e["imgs"], "views": votes, "score": 2000 + avg * 10, "posted_at": posted,
         })

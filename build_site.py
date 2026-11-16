@@ -319,6 +319,9 @@ def export() -> None:
     try:  # 애니 평점 글 끝에 넣을 최고 평점 에피소드 TOP 3
         ex = json.loads((BASE / "data" / "anime_extra.json").read_text(encoding="utf-8"))
         name = cfg.get("anime_ratings", {}).get("category", "애니 평점")
+        for it in out:  # 작품을 제대로 찾았는지 확인해 볼 만한 것 표시
+            if ex.get("notes", {}).get(it["url"]):
+                it["note"] = ex["notes"][it["url"]]
         if name in cats and ex.get("top_episodes"):
             cats[name]["outro"] = f"{int(ex['month'][5:])}월 최고 평점 에피소드 TOP {len(ex['top_episodes'])}\n" + "\n".join(ex["top_episodes"])
     except (FileNotFoundError, json.JSONDecodeError, ValueError):

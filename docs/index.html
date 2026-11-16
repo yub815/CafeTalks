@@ -115,8 +115,13 @@ async function init(){
   renderList();
 }
 
+// 애니 평점 순위: 몇 위까지 보여줄지 (브라우저에 기억)
+let RANK_N = (() => { try{ return +localStorage.getItem('wc_rank_n') || 10; }catch(e){ return 10; } })();
+const isRank = it => it.source === 'IMDb 작품 평점';
 function rows(){
-  return allItems().filter(it => it.category === CAT && (it.week || THIS_WEEK) === WEEK && !HIDDEN.has(it.id) && (SHOW_USED || !USED.has(it.id)));
+  let r = allItems().filter(it => it.category === CAT && (it.week || THIS_WEEK) === WEEK && !HIDDEN.has(it.id) && (SHOW_USED || !USED.has(it.id)));
+  if(r.some(isRank)){ let k = 0; r = r.filter(it => !isRank(it) || ++k <= RANK_N); }
+  return r;
 }
 
 function media(src, cls=''){
@@ -134,6 +139,9 @@ function renderList(){
     <button class="g" id="toggleUsed">${SHOW_USED ? '쓴 것 숨기기' : '쓴 것도 보기'}</button>`;
   if(roundup) h += `<button class="b" id="buildTop">체크한 것으로 글 만들기</button>`;
   h += `</div>`;
+  if(list.some(isRank)) h += `<div class="bar"><span class="meta">순위 TOP</span>
+    <input type="number" id="rankN" min="1" max="30" value="${RANK_N}" style="width:70px">
+    <span class="meta">까지 보기 (전부 체크돼 있어요. 빼고 싶은 건 체크 해제하면 순위가 알아서 당겨져요)</span></div>`;
   if(DATA.categories[CAT] && DATA.categories[CAT].style === 'numbered'){
     h += `<div class="addbox">
       <div class="bar" style="margin:0"><input type="text" id="gq" placeholder="게임 검색 (한글·영어 이름, 스팀 인기 게임)" style="max-width:420px" autocomplete="off">
@@ -152,13 +160,14 @@ function renderList(){
   for(const it of list){
     const used = USED.has(it.id);
     h += `<div class="card${roundup ? ' pickable' : ''}" id="c${it.id}">
-      <div>${roundup ? `<input type="checkbox" class="pick" value="${it.id}">` : ''}</div>
+      <div>${roundup ? `<input type="checkbox" class="pick" value="${it.id}"${isRank(it) ? ' checked' : ''}>` : ''}</div>
       <div class="pic">${media(it.images[0])}${it.images.length > 1 ? `<div class="meta">+${it.images.length - 1}장</div>` : ''}</div>
       <div>
         <div class="meta">${esc(it.source)} · ${esc(it.posted_at.slice(0,16).replace('T',' '))}
           ${it.views ? ' · 조회 ' + fmt(it.views) : ''}${it.likes ? ' · 추천 ' + fmt(it.likes) : ''}${it.comments ? ' · 댓글 ' + fmt(it.comments) : ''}
           · <a href="${esc(it.url)}" target="_blank" rel="noopener">원본</a>
           ${used ? ' · <b style="color:var(--warn)">사용함</b>' : ''}
+          ${it.note ? `<br><b style="color:var(--warn)">⚠ 확인 필요: ${esc(it.note)}</b> (원본에서 맞는 작품인지 봐 주세요)` : ''}
           · ${it.custom ? `<button class="linkbtn" data-del="${it.id}">삭제</button>` : `<button class="linkbtn" data-hide="${it.id}">숨기기</button>`}</div>
         <div class="title">${esc(it.title)}</div>`;
     if(roundup){
@@ -180,6 +189,12 @@ function renderList(){
   $('#main').innerHTML = h;
   window.scrollTo(0, 0);
   $('#toggleUsed').onclick = () => { SHOW_USED = !SHOW_USED; renderList(); };
+  if($('#rankN')) $('#rankN').onchange = e => {
+    RANK_N = Math.max(1, Math.min(30, +e.target.value || 10));
+    try{ localStorage.setItem('wc_rank_n', RANK_N); }catch(_){}
+    renderList();
+  };
+  document.querySelectorAll('.pick:checked').forEach(c => c.closest('.card').classList.add('sel'));
   if($('#gq')) setupGameAdd();
   document.querySelectorAll('[data-del]').forEach(b => b.onclick = () => { CUSTOM = CUSTOM.filter(x => x.id !== b.dataset.del); saveCustom(); renderList(); });
   document.querySelectorAll('[data-week]').forEach(b => b.onclick = () => { WEEK = b.dataset.week; renderList(); });
@@ -219,6 +234,7 @@ function buildRoundup(){
   const parts = conf.intro ? [linesHtml(conf.intro), '<p>&nbsp;</p>'] : [];
   const files = [];
   const shown = new Set();
+  let rankNo = 0;
   ids.forEach((id, k) => {
     const it = byId(id);
     // 평점 순위: 회차·작품 순위 앞에 한 번씩 설명 줄
@@ -229,7 +245,8 @@ function buildRoundup(){
     }
     const chosen = [...document.querySelectorAll('.img' + id + ':checked')].map(c => it.images[+c.value]);
     const imgs = chosen.length ? chosen : it.images.slice(0, 1);
-    const heading = $('#h' + id).value, comment = $('#t' + id).value;
+    let heading = $('#h' + id).value; const comment = $('#t' + id).value;
+    if(isRank(it)) heading = (++rankNo) + '위 ' + heading.replace(/^\d+위\s*/, '');
     if(conf.style === 'numbered'){
       parts.push(`<p><b>${k + 1}. ${esc(heading)}</b></p><p><a href="${esc(it.url)}">${esc(it.url)}</a></p>`);
     }else{
