@@ -95,9 +95,6 @@
  "https://www.ziksir.com/news/articleView.html?idxno=152660": [
   "img/98cc304f28c6bf96.jpg"
  ],
- "https://www.foodbank.co.kr/news/articleView.html?idxno=68765": [
-  "img/8fe935b35de5b590.jpg"
- ],
  "https://www.mt.co.kr/industry/2026/11/09/2026110614054228434": [
   "img/73b439fa6d3cbc7f.jpg",
   "img/5ca95ebb4630c825.jpg"
@@ -207,9 +204,6 @@
  "https://biz.newdaily.co.kr/site/data/html/2026/11/11/2026111100228.html": [
   "img/93cfc52bfa1effb7.jpg"
  ],
- "https://sports.hankooki.com/news/articleView.html?idxno=6943504": [
-  "img/9f44381f81e6526a.jpg"
- ],
  "https://view.asiae.co.kr/article/2026111108001090998": [
   "img/0497f9aa238521c2.jpg"
  ],
@@ -240,29 +234,11 @@
  "http://bokuennews.com/news/article.html?no=287035": [
   "img/3c7c63328d4084b8.jpg"
  ],
- "https://news.bbsi.co.kr/news/articleView.html?idxno=4118595": [
-  "img/9d5357b53244c72d.jpg"
- ],
- "https://www.slist.kr/news/articleView.html?idxno=780426": [
-  "img/70f1010b2fdb3bb3.jpg"
- ],
  "https://www.dailysmart.co.kr/news/articleView.html?idxno=132336": [
   "img/3c7baf9aa807b731.jpg"
  ],
  "https://www.newsa.co.kr/news/articleView.html?idxno=403750": [
   "img/3dedbf57195a49f0.jpg"
- ],
- "https://www.newswhoplus.com/news/articleView.html?idxno=74258": [
-  "img/c267e96960287e23.jpg"
- ],
- "https://www.newswhoplus.com/news/articleView.html?idxno=74002": [
-  "img/4e6b64bd47d42fa0.jpg"
- ],
- "https://www.msn.com/ko-kr/entertainment/games/%EC%8B%9C%EB%AA%AC%EC%8A%A4-%ED%85%8C%EB%9D%BC%EC%8A%A4-%EA%B2%A8%EC%9A%B8-%EC%8B%A0%EB%A9%94%EB%89%B4-%EC%B6%9C%EC%8B%9C-%ED%81%AC%EB%A6%AC%EC%8A%A4%EB%A7%88%EC%8A%A4-%EB%B6%84%EC%9C%84%EA%B8%B0-%EB%8D%94%ED%95%9C%EB%8B%A4/ar-AA2hkNTV": [
-  "img/77cbb94fda8bf2f1.jpg"
- ],
- "https://www.fnnews.com/news/202611140703114412": [
-  "img/9f0d77378706cb73.jpg"
  ],
  "https://www.straightnews.co.kr/news/articleView.html?idxno=315259": [
   "img/4ff04275d8414bc4.jpg"
@@ -272,11 +248,6 @@
  ],
  "https://www.newspim.com/news/view/20261111000071": [
   "img/7bdac3b942903ce8.jpg"
- ],
- "https://www.dailypop.kr/news/articleView.html?idxno=104485": [
-  "img/2afd68f1a2280988.jpg",
-  "img/62b747a50c667436.jpg",
-  "img/1bae0c48db81def6.jpg"
  ],
  "https://www.job-post.co.kr/news/articleView.html?idxno=237128": [
   "img/df76a8126c5d436e.jpg"
@@ -296,5 +267,34 @@
  ],
  "https://www.dailycnc.com/news/articleView.html?idxno=245532": [
   "img/dd47f15818373430.jpg"
+ ],
+ "https://www.joongangenews.com/news/articleView.html?idxno=563943": [
+  "img/495b1aa15120cb75.jpg"
+ ],
+ "https://www.yhtoday.co.kr/news/articleView.html?idxno=77846": [
+  "img/f6f7d8fe1aa17aaf.jpg"
+ ],
+ "https://www.mk.co.kr/news/business/12209605": [
+  "img/40722164f797d8d6.jpg",
+  "img/f2a24652baa2e161.jpg",
+  "img/9ae3969842d5b73f.jpg"
+ ],
+ "https://www.newsquest.co.kr/news/articleView.html?idxno=305007": [
+  "img/ca6a46be92c8b8ff.jpg"
+ ],
+ "https://www.yhtoday.co.kr/news/articleView.html?idxno=77841": [
+  "img/fbabb9f7c685e8ab.jpg"
+ ],
+ "https://www.jasm.co.kr/news/view/325392/CU-%EB%A6%AC%EC%84%BC%EB%8A%90-%EA%B5%BF%EC%A6%88-20%EC%9D%BC-%ED%8C%90%EB%A7%A4-%EB%A6%AC%ED%8A%B8-%EB%A9%94%ED%8A%B8-%EC%BA%90%EB%A6%AD%ED%84%B0-%ED%99%9C%EC%9A%A9-2026": [
+  "img/44e90a113a878fc3.jpg",
+  "img/3744c2c97d3d3f2f.jpg",
+  "img/49e7eec292053c2a.jpg"
+ ],
+ "https://www.betanews.net/article/view/beta202611160022": [
+  "img/cfbb4abf0b7b2067.jpg"
+ ],
+ "https://www.specialtimes.co.kr/news/articleView.html?idxno=485880": [],
+ "https://www.msn.com/ko-kr/news/other/%EC%86%8C%EB%B9%84%EC%9E%90%EA%B0%80-%EA%B3%A0%EB%A5%B8-%EC%97%90%EB%93%9C%EC%9B%8C%EB%93%9C-%EB%A6%AC%EC%9D%98-%EC%8B%A0%EB%9D%BC%EB%A9%B4-%EB%86%8D%EC%8B%AC-%ED%95%B4%EB%AC%BC-%EC%96%B4%EB%AC%B5-%EC%84%A0%EB%B3%B4%EC%9D%B8%EB%8B%A4/ar-AA2huTvD": [
+  "img/8a834d33d436394c.jpg"
  ]
 }
