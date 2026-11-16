@@ -142,8 +142,11 @@ def collect(cfg: dict) -> list[dict]:
     start = (now.replace(day=1) - timedelta(days=1)).replace(day=1, hour=0, minute=0, second=0, microsecond=0)
     end = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
     month = f"{start.year}-{start.month:02d}"
-    air = [a for a in airings((now - start).days + 1, ac.get("min_popularity", 30000))
-           if start.timestamp() <= a["airingAt"] < end.timestamp()]
+    fetched = airings((now - start).days + 1, ac.get("min_popularity", 30000))
+    latest: dict[int, int] = {}  # 작품별 지금까지 방영된 마지막 화 (AniList 기준)
+    for a in fetched:
+        latest[a["media"]["id"]] = max(latest.get(a["media"]["id"], 0), a["episode"])
+    air = [a for a in fetched if start.timestamp() <= a["airingAt"] < end.timestamp()]
     print(f"  [애니 평점] {month} 방영 기록 {len(air)}개")
     names = {}
     for a in air:
@@ -165,8 +168,17 @@ def collect(cfg: dict) -> list[dict]:
         cands = []
         for t in names[m["id"]]:
             for sid in series.get(t, ()):
-                for season, epn, tc in by_series.get(sid, []):
-                    if epn == n and ep_year.get(tc) in (aired.year, aired.year - 1) and tc in ratings:
+                recent = [(se, epn, tc) for se, epn, tc in by_series.get(sid, [])
+                          if ep_year.get(tc) in (aired.year, aired.year - 1)]
+                if not recent:
+                    continue
+                season = max(se for se, _, _ in recent)
+                rated = [epn for se, epn, tc in recent if se == season and tc in ratings]
+                # 2기·2쿨을 AniList는 1화부터, IMDb는 앞 시즌에 이어서 셀 때가 있어서 화수 차이를 맞춤
+                # (IMDb에 평점 붙은 마지막 화가 AniList 최신화보다 크면 그만큼 밀려 있는 것)
+                off = max(0, max(rated, default=0) - latest.get(m["id"], n))
+                for se, epn, tc in recent:
+                    if se == season and epn == n + off and tc in ratings:
                         cands.append((season, ep_year[tc], tc, sid))
         if not cands:
             continue
