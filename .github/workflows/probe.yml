@@ -11,5 +11,8 @@ jobs:
       - shell: bash {0}
         run: |
           pip install -q -r requirements.txt
-          curl -s https://graphql.anilist.co -H 'Content-Type: application/json' -d '{"query":"{a:Page(perPage:5){media(search:\"Steel Ball Run\",type:ANIME){id popularity format countryOfOrigin title{romaji english native} synonyms startDate{year month} nextAiringEpisode{episode}}} b:Page(perPage:5){media(search:\"Seitokai ni mo Ana wa Aru\",type:ANIME){id popularity format title{romaji english native} synonyms}}}"}'; echo
-          curl -s https://datasets.imdbws.com/title.basics.tsv.gz | gunzip | grep -iE "	(JoJo|Seitokai|Student Council|Steel Ball)" | grep -iE "steel|jojo no|jojo's bizarre|seitokai|student council" | grep -E "tvSeries|tvMini" | head -20
+          curl -s https://datasets.imdbws.com/title.episode.tsv.gz | gunzip | grep -P "\ttt38268282\t" | sort -t$'\t' -k3,3n -k4,4n > sbr.tsv
+          curl -s https://datasets.imdbws.com/title.ratings.tsv.gz | gunzip > r.tsv
+          while IFS=$'\t' read a b c d; do echo "SBR $c $d $a $(grep -P "^$a\t" r.tsv | cut -f2,3)"; done < sbr.tsv
+          ANIME_DEBUG=1 python anime_ratings.py | grep -E "DBG|애니"
+        env: {ANTHROPIC_API_KEY: "${{ secrets.ANTHROPIC_API_KEY }}"}

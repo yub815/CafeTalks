@@ -33,8 +33,8 @@ title{romaji english native}}}}}"""
 
 def _norm(t: str) -> str:
     t = (t or "").lower()
-    t = re.sub(r"(season|part|cour)\s*\d+|\d+(st|nd|rd|th)\s*(season|part|cour)|第\s*\d+\s*(期|クール)|"
-               r"\b(ii|iii|iv)\b|[:：\-–!?！？.,'\"()（）\[\]「」『』・~〜]", " ", t)
+    t = re.sub(r"(season|part|cour)\s*\d+|\d+(st|nd|rd|th)\b(\s*(season|part|cour|stage))?|\bstage\b|第\s*\d+\s*(期|クール)|"
+               r"\b(ii|iii|iv)\b|[:：\-–!?！？.,'\"()（）\[\]「」『』・~〜&＆]", " ", t)
     return re.sub(r"\s+", "", t)
 
 
@@ -199,6 +199,9 @@ def collect(cfg: dict) -> list[dict]:
             lst = sorted({e["n"]: e for e in lst}.values(), key=lambda e: e["n"])
             avg = sum(e["rating"] for e in lst) / len(lst)
             shows.append((avg, sum(e["votes"] for e in lst), lst))
+    if os.environ.get("ANIME_DEBUG"):
+        for avg, votes, lst in sorted(shows, key=lambda x: -x[0]):
+            print("   DBG", round(avg, 2), lst[0]["ko"], [(x["n"], x["tc"], x["rating"], x["votes"]) for x in lst])
     for rank, (avg, votes, lst) in enumerate(sorted(shows, key=lambda x: (-x[0], -x[1]))[:top], 1):
         e = lst[0]
         items.append({
