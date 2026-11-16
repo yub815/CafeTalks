@@ -179,10 +179,10 @@ def collect(cfg: dict) -> list[dict]:
                 off = max(0, max(rated, default=0) - latest.get(m["id"], n))
                 for se, epn, tc in recent:
                     if se == season and epn == n + off and tc in ratings:
-                        cands.append((season, ep_year[tc], tc, sid))
+                        cands.append((season, ep_year[tc], tc, sid, epn))
         if not cands:
             continue
-        _, _, tc, sid = max(cands)  # 가장 최근 시즌의 그 화
+        _, _, tc, sid, n = max(cands)  # 가장 최근 시즌의 그 화 (화수는 IMDb 기준: 이어서 세는 작품은 이어진 번호로)
         rating, votes = ratings[tc]
         if votes < min_votes:
             continue
