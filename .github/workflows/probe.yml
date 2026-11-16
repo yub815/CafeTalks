@@ -1,0 +1,21 @@
+name: probe
+on: [push]
+jobs:
+  p:
+    if: contains(github.event.head_commit.message, 'probe')
+    runs-on: ubuntu-latest
+    steps:
+      - shell: bash {0}
+        run: |
+          curl -sL https://raw.githubusercontent.com/Kometa-Team/Anime-IDs/master/anime_ids.json -o k.json; ls -la k.json
+          python3 -c "
+          import json; d=json.load(open('k.json')); print(len(d))
+          for k,v in d.items():
+              if v.get('anilist_id') in (210482,190327,191656,195604,189123,206814,198727): print(k,v)
+          "
+          curl -sL https://raw.githubusercontent.com/Fribb/anime-lists/master/anime-list-full.json -o f.json; ls -la f.json
+          python3 -c "
+          import json; d=json.load(open('f.json')); print(len(d))
+          for v in d:
+              if v.get('anilist_id') in (210482,190327,191656,195604,189123,206814,198727): print(v)
+          "
