@@ -315,12 +315,6 @@
  "https://www.seoul.co.kr/news/economy/2026/11/13/20261113500209": [
   "img/e810b5dc51621cf6.jpg"
  ],
- "https://www.financialpost.co.kr/news/articleView.html?idxno=301171": [
-  "img/18c5e35c99d1c3a8.jpg"
- ],
- "https://www.lawissue.co.kr/view.php?ud=202611161353582137204ead0791_12": [
-  "img/ee79536411eb602d.jpg"
- ],
  "https://www.joongang.co.kr/article/25478975": [
   "img/14b3fcd65ac73051.jpg"
  ],
@@ -332,9 +326,6 @@
  ],
  "https://www.eroun.net/news/articleView.html?idxno=95578": [
   "img/d60c42f9c385746b.jpg"
- ],
- "https://www.hankyung.com/article/202611169063g": [
-  "img/733e2d8d19b2d300.jpg"
  ],
  "https://www.financialpost.co.kr/news/articleView.html?idxno=301169": [
   "img/1bdc97220951e944.jpg"
@@ -352,9 +343,6 @@
   "img/41a7604734b8f4d1.jpg"
  ],
  "https://www.youthdaily.co.kr/news/article.html?no=229929": [],
- "https://www.meconomynews.com/news/articleView.html?idxno=203766": [
-  "img/be79b551acf59b5c.jpg"
- ],
  "https://www.etnews.com/20261117000056": [
   "img/da7f2b0976279605.jpg"
  ],
@@ -370,11 +358,52 @@
   "img/afcd50f515e5792a.jpg",
   "img/9e1bd4c33104a407.jpg"
  ],
- "https://www.foodnews.news/news/article.html?no=1644775": [
-  "img/aa0cd58e96189d57.jpg"
- ],
  "https://www.mk.co.kr/news/business/12210894": [
   "img/5589ad5242ce51a5.jpg"
  ],
- "https://www.pointdaily.co.kr/news/articleView.html?idxno=326214": []
+ "https://www.pointdaily.co.kr/news/articleView.html?idxno=326214": [],
+ "https://www.autodaily.co.kr/news/articleView.html?idxno=602169": [
+  "img/2acb5ff4f82d3368.jpg"
+ ],
+ "https://www.eroun.net/news/articleView.html?idxno=95820": [
+  "img/8eb2a7af58aa8533.jpg",
+  "img/e62d2a42569ff47f.jpg"
+ ],
+ "https://www.2news.co.kr/news/articleView.html?idxno=32983": [],
+ "http://www.newslock.co.kr/news/articleView.html?idxno=140159": [],
+ "https://www.shinailbo.co.kr/news/articleView.html?idxno=5084156": [
+  "img/65b544336a1688e1.jpg"
+ ],
+ "https://www.etnews.com/20261118000110": [
+  "img/ccf3f8e411e00cc5.jpg"
+ ],
+ "https://www.wikitree.co.kr/articles/1175498": [
+  "img/61a392037ac64b7b.jpg",
+  "img/63797eda45c55810.jpg",
+  "img/68fb3545590a41a9.jpg",
+  "img/07b81b5a20f9aa19.jpg",
+  "img/fa2d2b1179442eac.jpg",
+  "img/17001d8b962d8346.jpg"
+ ],
+ "https://www.iworldtoday.com/news/articleView.html?idxno=425742": [
+  "img/c5be466625b2eb83.jpg"
+ ],
+ "https://www.bizjoongang.co.kr/news/articleView.html?idxno=55400": [
+  "img/b73279d72a719352.jpg"
+ ],
+ "https://www.ppss.kr/news/articleView.html?idxno=320598": [
+  "img/d1ca4899535d5520.jpg"
+ ],
+ "https://www.fnnews.com/news/202611181030216710": [
+  "img/197cbd956d552be0.jpg"
+ ],
+ "https://sports.hankooki.com/news/articleView.html?idxno=6943721": [],
+ "https://www.dailypharm.com/user/news/344691": [
+  "img/397f2e03fde58534.jpg",
+  "img/0b69030efe4b4303.jpg",
+  "img/42d21a2d7a221c81.jpg",
+  "img/2f2590854d628a29.jpg",
+  "img/dfc22eeaadd1daf9.jpg",
+  "img/4747ad08f4c1ed02.jpg"
+ ]
 }
