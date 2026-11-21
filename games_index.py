@@ -95,7 +95,7 @@ def build(max_details: int = MAX_DETAILS) -> None:
         games.append({"id": "steam:" + appid, "en": g.get("en", ""), "ko": g.get("ko", ""),
                       "url": f"https://store.steampowered.com/app/{appid}/",
                       "desc": g.get("desc", ""), "genres": g.get("genres", []),
-                      "images": (g.get("videos") or []) + (g.get("images") or [f"https://cdn.akamai.steamstatic.com/steam/apps/{appid}/header.jpg"]),
+                      "images": (g.get("videos") or []) + (g.get("images") or [f"https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/{appid}/header.jpg"]),
                       "src": "스팀"})
     OUT.parent.mkdir(parents=True, exist_ok=True)
     OUT.write_text(json.dumps(games, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")

@@ -424,7 +424,22 @@ async function setupGameAdd(){
         <div class="meta">${esc(g.src)}${g.genres && g.genres.length ? ' · ' + esc(g.genres.join(', ')) : ''}</div></div>
         <button class="b" data-gi="${i}">추가</button></div>`).join('')
       : (PROXY ? '' : '<div class="meta">목록에 없어요. 웹게임이나 덜 알려진 게임은 "목록에 없으면 직접 추가"로 넣어 주세요.</div>');
-    box.querySelectorAll('[data-gi]').forEach(b => b.onclick = () => { addCustom(GAMES[+b.dataset.gi]); });
+    box.querySelectorAll('[data-gi]').forEach(b => b.onclick = async () => {
+      const g = GAMES[+b.dataset.gi], sid = (g.id || '').replace(/^steam:/, '');
+      // 목록에 정보가 덜 들어 있는 게임(설명·스크린샷 없음)은 중계 서버로 스팀 정보를 다시 받아 옴
+      if(PROXY && /^\d+$/.test(sid) && (!g.desc || (g.images || []).length < 2)){
+        b.disabled = true; b.textContent = '불러오는 중';
+        try{
+          const d = await (await fetch(PROXY + '/app?id=' + sid)).json();
+          if(d.name){
+            addCustom({ko: g.ko || d.name, en: g.en, url: d.url, desc: d.desc, genres: d.genres,
+                       images: (d.videos || []).concat(d.images.length ? d.images : (d.header ? [d.header] : [])), src: '스팀'});
+            return;
+          }
+        }catch(e){}
+      }
+      addCustom(g);
+    });
     steamSearch(q.value.trim(), new Set(hits.map(h => h[2].url)));
   };
   proxySetup();

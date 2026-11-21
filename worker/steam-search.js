@@ -27,7 +27,7 @@ export default {
         return json({
           items: (d.items || []).filter(x => x.type === "app").slice(0, 10).map(x => ({
             id: x.id, name: x.name,
-            img: `https://cdn.akamai.steamstatic.com/steam/apps/${x.id}/header.jpg`,
+            img: x.tiny_image || `https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/${x.id}/header.jpg`,
           })),
         });
       }
