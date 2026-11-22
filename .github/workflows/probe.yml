@@ -9,4 +9,4 @@ jobs:
       - shell: bash {0}
         env:
           IG_ACCESS_TOKEN: ${{ secrets.IG_ACCESS_TOKEN }}
-        run: pip -q install requests; python probe_ig.py
+        run: pip -q install -r requirements.txt; python probe_ig.py

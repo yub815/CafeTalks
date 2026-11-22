@@ -331,6 +331,21 @@
     "category": "신상",
     "posts_per_account": 8,
     "_설명": "따라갈 브랜드 공식 인스타 계정 (@ 빼고). 비즈니스/크리에이터 계정만 됩니다. 못 찾은 계정은 data/ig_state.json 의 missing 에 적혀요.",
-    "accounts": []
+    "accounts": [
+      "cu_official",
+      "gs25_official",
+      "7elevenkorea",
+      "emart24_official",
+      "nongshim",
+      "lottewellfood",
+      "samyangfoods",
+      "paldofood",
+      "cjcheiljedang",
+      "starbuckskorea",
+      "mcdonalds_kr",
+      "burgerkingkorea",
+      "baskinrobbinskorea",
+      "parisbaguette_kr"
+    ]
   }
 }
