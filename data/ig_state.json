@@ -70,17 +70,28 @@
   "더벤티: theventi_coffee, theventi_kr, theventi.official",
   "카페베네: caffebene_kr, caffebene_official, caffebene.korea",
   "나뚜루: natuur_kr, natuurkorea, natuur_official",
-  "청정원: chungjungone_official, chungjungone_kr, chungjungone.korea"
+  "청정원: chungjungone_official, chungjungone_kr, chungjungone.korea",
+  "wonhalmoni",
+  "wonhalmoni_official",
+  "wonhalmoni_kr",
+  "wonhalmoni_korea",
+  "wonhalmonikorea",
+  "wonhalmoni.official",
+  "wonhalmoniofficial",
+  "wonhalmoni_kor",
+  "seoulmilk"
  ],
- "found": {},
+ "found": {
+  "seoulmilk_official": "2026-11-22"
+ },
  "mentions": {
   "vincentcosmic.co.kr": 1
  },
- "last_collect": "2026-11-22T13:16+09:00",
+ "last_collect": "2026-11-22T13:21+09:00",
  "rejected": [
   "pulmuone_official",
   "maxim_official",
   "chilsung_official"
  ],
- "last_discover": "2026-11-22T13:17+09:00"
+ "last_discover": "2026-11-22T13:21+09:00"
 }
