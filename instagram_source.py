@@ -87,7 +87,10 @@ def collect(cfg: dict) -> list[dict]:
     n = ic.get("posts_per_account", 8)
     items: list[dict] = []
     ok = 0
-    for name in [a.lstrip("@") for a in ic["accounts"]]:
+    found = st.setdefault("found", {})
+    mentions = st.setdefault("mentions", {})
+    names = list(dict.fromkeys([a.lstrip("@") for a in ic["accounts"]] + list(found)))
+    for name in names[: ic.get("max_accounts", 40)]:
         if name in missing:
             continue
         try:
@@ -103,6 +106,11 @@ def collect(cfg: dict) -> list[dict]:
         media = ((d.get("business_discovery") or {}).get("media") or {}).get("data", [])
         last = seen.get(name, "")
         for m in media:
+            if not last or m.get("timestamp", "") > last:  # 새 글에서 언급된 다른 계정 (새 계정 찾기용)
+                for u in set(MENTION.findall(m.get("caption") or "")):
+                    u = u.rstrip(".").lower()
+                    if u != name.lower():
+                        mentions[u] = mentions.get(u, 0) + 1
             ts = m.get("timestamp", "")
             if last and ts <= last:
                 continue
@@ -129,9 +137,87 @@ def collect(cfg: dict) -> list[dict]:
             })
         if media:
             seen[name] = max(seen.get(name, ""), *(m.get("timestamp", "") for m in media))
-    STATE.write_text(json.dumps(st, ensure_ascii=False, indent=1), encoding="utf-8")
     print(f"  [인스타] 계정 {ok}개 확인 → 신상 후보 {len(items)}개")
+    # 일주일에 한 번: 따라갈 새 브랜드 계정 찾기
+    last_disc = st.get("last_discover", "")
+    if not last_disc or datetime.now(collector.KST) - datetime.fromisoformat(last_disc) >= timedelta(days=7):
+        try:
+            discover(cfg, token, me, st, names)
+            st["last_discover"] = datetime.now(collector.KST).isoformat(timespec="minutes")
+        except Exception as e:
+            print(f"  ! 인스타 새 계정 찾기 실패: {e}")
+    STATE.write_text(json.dumps(st, ensure_ascii=False, indent=1), encoding="utf-8")
     return items
+
+
+MENTION = re.compile(r"@([A-Za-z0-9._]{3,30})")
+DISC_SCHEMA = {"type": "object", "additionalProperties": False, "required": ["items"],
+               "properties": {"items": {"type": "array", "items": {"type": "string"}}}}
+
+
+def _ask(what: str, prompt: str) -> list[str]:
+    if not os.environ.get("ANTHROPIC_API_KEY"):
+        return []
+    import anthropic
+    import llm_dedupe
+    resp = llm_dedupe.create(anthropic.Anthropic(), what, model=llm_dedupe.MODEL, max_tokens=4000,
+                             output_config={"effort": "low", "format": {"type": "json_schema", "schema": DISC_SCHEMA}},
+                             messages=[{"role": "user", "content": prompt}])
+    text = next((b.text for b in resp.content if b.type == "text"), "{}")
+    return [x.strip().lstrip("@").lower() for x in json.loads(text).get("items", []) if x.strip()]
+
+
+def discover(cfg: dict, token: str, me: str, st: dict, following: list[str]) -> None:
+    """새로 따라갈 만한 브랜드 공식 계정 찾기 (주 1회).
+    후보 = 따라가는 계정 글에서 언급된 계정 + Claude가 떠올린 한국 식품·음료·편의점·프랜차이즈 공식 계정 이름.
+    실제로 있는지 인스타에서 확인 → 팔로워 1만 이상·최근 30일 안에 글 있음 → Claude가 '공식 브랜드 계정'인지 판정."""
+    ic = cfg.get("instagram_source", {})
+    found, rejected = st.setdefault("found", {}), st.setdefault("rejected", [])
+    missing = st.setdefault("missing", [])
+    known = {x.lower() for x in following + rejected + missing}
+    mentions = st.get("mentions", {})
+    cands = [u for u, _ in sorted(mentions.items(), key=lambda x: -x[1]) if u not in known][:30]
+    guess = _ask("인스타 계정 후보", (
+        "한국에서 과자·라면·음료·아이스크림·편의점·카페·패스트푸드·치킨 같은 먹거리 신제품을 자주 올리는 "
+        "브랜드 공식 인스타그램 계정 아이디를 30개 떠올려 주세요. 아이디만 (@ 없이) 적어 주세요. "
+        "이미 따라가는 계정과 없는 걸로 확인된 아이디는 빼 주세요:\n" + ", ".join(sorted(known))))
+    cands += [u for u in guess if u not in known and u not in cands]
+    ok, old = [], datetime.now(collector.KST) - timedelta(days=30)
+    for u in cands[:60]:
+        try:
+            d = _get(me, token, fields=f"business_discovery.username({u}){{username,name,biography,"
+                                        "followers_count,media.limit(3){timestamp,caption}}")
+        except Exception as e:
+            if "Invalid user id" in str(e) or "cannot be found" in str(e) or "(#110)" in str(e):
+                missing.append(u)
+            continue
+        b = d.get("business_discovery") or {}
+        media = (b.get("media") or {}).get("data", [])
+        recent = media and datetime.strptime(media[0]["timestamp"], "%Y-%m-%dT%H:%M:%S%z") >= old
+        if (b.get("followers_count") or 0) < ic.get("discover_min_followers", 10000) or not recent:
+            rejected.append(u)
+            continue
+        cap = " / ".join((m.get("caption") or "")[:80].replace("\n", " ") for m in media)
+        ok.append((u, f"@{u} | {b.get('name', '')} | 팔로워 {b.get('followers_count')} | "
+                      f"소개: {(b.get('biography') or '')[:100]} | 최근 글: {cap}"))
+    if not ok:
+        print(f"  [인스타] 새 계정 찾기: 후보 {len(cands)}개 중 조건 맞는 계정 없음")
+        return
+    yes = set(_ask("인스타 계정 판정", (
+        "아래 인스타그램 계정 중 '한국 먹거리 브랜드의 공식 계정'(과자·라면·음료·아이스크림·편의점·카페·"
+        "패스트푸드·치킨 등, 신제품 소식을 올리는 곳)만 아이디로 골라 주세요. 개인·리뷰어·매장 지점·"
+        "연예인·해외 계정·화장품/패션 등 먹거리가 아닌 브랜드는 빼 주세요.\n\n"
+        + "\n".join(line for _, line in ok))))
+    today = datetime.now(collector.KST).strftime("%Y-%m-%d")
+    added = []
+    for u, _ in ok:
+        if u in yes:
+            found[u] = today
+            added.append(u)
+        else:
+            rejected.append(u)
+    print(f"  [인스타] 새 계정 찾기: 후보 {len(cands)}개 확인 → 새로 따라감: "
+          + (", ".join("@" + u for u in added) or "없음"))
 
 
 if __name__ == "__main__":

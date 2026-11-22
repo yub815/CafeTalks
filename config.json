@@ -330,7 +330,7 @@
     "enabled": true,
     "category": "신상",
     "posts_per_account": 8,
-    "_설명": "따라갈 브랜드 공식 인스타 계정 (@ 빼고). 비즈니스/크리에이터 계정만 됩니다. 못 찾은 계정은 data/ig_state.json 의 missing 에 적혀요.",
+    "_설명": "따라갈 브랜드 공식 인스타 계정 (@ 빼고). 여기 계정 + 주 1회 자동으로 찾은 계정(data/ig_state.json 의 found)을 하루 한 번 읽어요. 자동으로 찾은 계정을 빼려면 found 에서 지우고 rejected 에 넣으세요.",
     "accounts": [
       "cu_official",
       "gs25_official",
@@ -352,6 +352,8 @@
       "dunkin_kr",
       "kyochon_official",
       "gongcha_korea"
-    ]
+    ],
+    "max_accounts": 40,
+    "discover_min_followers": 10000
   }
 }
