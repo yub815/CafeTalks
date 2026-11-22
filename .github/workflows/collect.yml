@@ -46,6 +46,7 @@ jobs:
       - name: 수집 + 웹페이지 데이터 만들기
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}  # 없으면 중복 검사만 건너뜀
+          X_BEARER_TOKEN: ${{ secrets.X_BEARER_TOKEN }}  # 없으면 X 수집 건너뜀
           LLM_SKIP_CATEGORIES: ${{ inputs.skip_claude }}
         run: |
           if [ "${{ inputs.games_only }}" = "true" ]; then python build_site.py --games-only

@@ -318,5 +318,12 @@
     "min_episodes": 2,
     "top": 30,
     "top_episodes": 3
+  },
+  "x_source": {
+    "enabled": true,
+    "category": "신상",
+    "max_posts_per_account": 5,
+    "_설명": "따라갈 브랜드 공식 X 계정 (@ 빼고). 적을수록 쌉니다. 글 1개 읽기 $0.005, 새 글만 가져와요.",
+    "accounts": []
   }
 }
