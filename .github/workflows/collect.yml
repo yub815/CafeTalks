@@ -18,6 +18,10 @@ on:
         description: "Claude 정리를 건너뛸 분류 (쉼표로, 예: 신상)"
         type: string
         default: ""
+      instagram_only:
+        description: "브랜드 인스타만 읽고 새 계정 찾기 바로 하기"
+        type: boolean
+        default: false
       games_only:
         description: "게임 검색 목록만 채우기"
         type: boolean
@@ -51,6 +55,7 @@ jobs:
           LLM_SKIP_CATEGORIES: ${{ inputs.skip_claude }}
         run: |
           if [ "${{ inputs.games_only }}" = "true" ]; then python build_site.py --games-only
+          elif [ "${{ inputs.instagram_only }}" = "true" ]; then python build_site.py --instagram-only
           elif [ "${{ inputs.export_only }}" = "true" ]; then python build_site.py --export-only
           elif [ "${{ inputs.humor_only }}" = "true" ] || { [ "${{ github.event_name }}" = "schedule" ] && [ "${{ github.event.schedule }}" != "0 21 * * *" ]; }; then python build_site.py --humor-only
           else python build_site.py; fi

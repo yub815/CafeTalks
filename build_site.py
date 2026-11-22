@@ -344,7 +344,13 @@ if __name__ == "__main__":
         import games_index
         games_index.build(max_details=800)
         sys.exit(0)
-    if "--humor-only" in sys.argv:
+    if "--instagram-only" in sys.argv:  # 브랜드 인스타만 읽기 + 새 계정 찾기 바로 하기
+        import instagram_source
+        con = collector.db()
+        for it in instagram_source.collect(collector.load_config(), force_discover=True):
+            collector.upsert(con, it)
+        con.commit()
+    elif "--humor-only" in sys.argv:
         collector.main(humor_only=True)
     elif "--export-only" not in sys.argv:
         collector.main()

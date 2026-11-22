@@ -75,7 +75,7 @@ def due_evening() -> bool:
     return now.hour >= 17 and last < now.replace(hour=17, minute=0, second=0, microsecond=0).isoformat()
 
 
-def collect(cfg: dict) -> list[dict]:
+def collect(cfg: dict, force_discover: bool = False) -> list[dict]:
     ic = cfg.get("instagram_source", {})
     token = os.environ.get("IG_ACCESS_TOKEN", "").strip()
     if not ic.get("enabled", True) or not token or not ic.get("accounts"):
@@ -148,7 +148,7 @@ def collect(cfg: dict) -> list[dict]:
     print(f"  [인스타] 계정 {ok}개 확인 → 신상 후보 {len(items)}개")
     # 일주일에 한 번: 따라갈 새 브랜드 계정 찾기
     last_disc = st.get("last_discover", "")
-    if not last_disc or datetime.now(collector.KST) - datetime.fromisoformat(last_disc) >= timedelta(days=7):
+    if force_discover or not last_disc or datetime.now(collector.KST) - datetime.fromisoformat(last_disc) >= timedelta(days=7):
         try:
             discover(cfg, token, me, st, names)
             st["last_discover"] = datetime.now(collector.KST).isoformat(timespec="minutes")
