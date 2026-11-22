@@ -148,7 +148,8 @@ def collect(cfg: dict, force_discover: bool = False) -> list[dict]:
     print(f"  [인스타] 계정 {ok}개 확인 → 신상 후보 {len(items)}개")
     # 일주일에 한 번: 따라갈 새 브랜드 계정 찾기
     last_disc = st.get("last_discover", "")
-    if force_discover or not last_disc or datetime.now(collector.KST) - datetime.fromisoformat(last_disc) >= timedelta(days=7):
+    if (force_discover and (not last_disc or datetime.now(collector.KST) - datetime.fromisoformat(last_disc) >= timedelta(hours=6))) \
+            or not last_disc or datetime.now(collector.KST) - datetime.fromisoformat(last_disc) >= timedelta(days=7):
         try:
             discover(cfg, token, me, st, names)
             st["last_discover"] = datetime.now(collector.KST).isoformat(timespec="minutes")
@@ -245,3 +246,31 @@ def discover(cfg: dict, token: str, me: str, st: dict, following: list[str]) -> 
 if __name__ == "__main__":
     for it in collect(collector.load_config()):
         print(it["source"], it["title"], len(it["images"]))
+
+
+def prune(con) -> None:
+    """인스타에서 가져온 글 중 '새 제품 출시'가 아닌 글(이벤트·캠페인·매장 오픈·굿즈 등)을 Claude가 걸러서 지움.
+    판정 결과는 data/ig_state.json 의 judged 에 저장해서 같은 글을 다시 묻지 않음."""
+    if not os.environ.get("ANTHROPIC_API_KEY"):
+        return
+    st = _load()
+    judged = st.setdefault("judged", {})
+    rows = [r for r in con.execute("SELECT url, source, title, summary FROM items WHERE source LIKE '인스타%'")
+            if r[0] not in judged]
+    for i in range(0, len(rows), 40):
+        chunk = rows[i:i + 40]
+        lines = [f"{n} | {r[1]} | {(r[3] or r[2] or '')[:300].replace(chr(10), ' ')}" for n, r in enumerate(chunk)]
+        keep = _ask("인스타 신상 판정", (
+            "아래는 먹거리 브랜드 인스타그램 글이에요 (번호 | 계정 | 내용). 각 글이 '새로 나온 먹거리 제품·메뉴를 "
+            "소개하는 글'인지 판정해서, 맞는 글의 번호만 적어 주세요.\n"
+            "맞음: 신제품·신메뉴·한정판·시즌 메뉴 출시, 리뉴얼 출시, 콜라보 제품 출시.\n"
+            "아님: 이벤트·경품·인증 챌린지·할인/프로모션·매장 오픈·팝업스토어·굿즈·광고 캠페인·기념일 인사·"
+            "기존 메뉴 홍보·화장품 등 먹거리가 아닌 제품. 애매하면 빼 주세요.\n\n" + "\n".join(lines)))
+        ok = {int(x) for x in keep if x.isdigit()}
+        for n, r in enumerate(chunk):
+            judged[r[0]] = n in ok
+            if n not in ok:
+                con.execute("DELETE FROM items WHERE url = ?", (r[0],))
+                print(f"  - 인스타 신상 아님, 뺌: {r[1]} {(r[2] or '')[:40]}")
+    con.commit()
+    STATE.write_text(json.dumps(st, ensure_ascii=False, indent=1), encoding="utf-8")

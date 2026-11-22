@@ -702,6 +702,7 @@ def main(humor_only: bool = False) -> None:
                         upsert(con, it)
                         total += 1
                     con.commit()
+                    instagram_source.prune(con)
             except Exception as e:
                 log(f"  ! 인스타 수집 실패: {e}")
         log(f"\n유머만 갱신 완료! {total}개 저장됨")
@@ -725,6 +726,7 @@ def main(humor_only: bool = False) -> None:
             upsert(con, it)
             total += 1
         con.commit()
+        instagram_source.prune(con)
     except Exception as e:
         log(f"  ! 인스타 수집 실패: {e}")
 

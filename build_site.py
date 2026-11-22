@@ -350,6 +350,7 @@ if __name__ == "__main__":
         for it in instagram_source.collect(collector.load_config(), force_discover=True):
             collector.upsert(con, it)
         con.commit()
+        instagram_source.prune(con)
     elif "--humor-only" in sys.argv:
         collector.main(humor_only=True)
     elif "--export-only" not in sys.argv:
