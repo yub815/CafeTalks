@@ -186,12 +186,13 @@ def discover(cfg: dict, token: str, me: str, st: dict, following: list[str]) -> 
     mentions = st.get("mentions", {})
     cands = [u for u, _ in sorted(mentions.items(), key=lambda x: -x[1]) if u not in known][:30]
     guess = _ask("인스타 계정 후보", (
-        "한국에서 과자·라면·음료·아이스크림·편의점·카페·패스트푸드·치킨 같은 먹거리 신제품을 자주 올리는 "
-        "브랜드 공식 인스타그램 계정 아이디를 30개 떠올려 주세요. 아이디만 (@ 없이) 적어 주세요. "
-        "이미 따라가는 계정과 없는 걸로 확인된 아이디는 빼 주세요:\n" + ", ".join(sorted(known))))
+        "한국에서 과자·라면·음료·아이스크림·편의점·카페·패스트푸드·치킨·베이커리 같은 먹거리 신제품을 자주 올리는 "
+        "브랜드 20곳을 골라, 브랜드마다 실제 공식 인스타그램 아이디일 법한 후보를 3개씩 적어 주세요 "
+        "(예: 브랜드명, 브랜드명_official, 브랜드명_kr, brand.korea 같은 변형). 아이디만 (@ 없이) 적어 주세요. "
+        "아래는 이미 따라가는 계정이거나 없는 걸로 확인된 아이디라 빼 주세요:\n" + ", ".join(sorted(known))))
     cands += [u for u in guess if u not in known and u not in cands]
     ok, old = [], datetime.now(collector.KST) - timedelta(days=30)
-    for u in cands[:60]:
+    for u in cands[: ic.get("discover_max_checks", 90)]:
         try:
             d = _get(me, token, fields=f"business_discovery.username({u}){{username,name,biography,"
                                         "followers_count,media.limit(3){timestamp,caption}}")
