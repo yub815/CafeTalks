@@ -185,14 +185,27 @@ def discover(cfg: dict, token: str, me: str, st: dict, following: list[str]) -> 
     known = {x.lower() for x in following + rejected + missing}
     mentions = st.get("mentions", {})
     cands = [u for u, _ in sorted(mentions.items(), key=lambda x: -x[1]) if u not in known][:30]
-    guess = _ask("인스타 계정 후보", (
-        "한국에서 과자·라면·음료·아이스크림·편의점·카페·패스트푸드·치킨·베이커리 같은 먹거리 신제품을 자주 올리는 "
-        "브랜드 20곳을 골라, 브랜드마다 실제 공식 인스타그램 아이디일 법한 후보를 3개씩 적어 주세요 "
-        "(예: 브랜드명, 브랜드명_official, 브랜드명_kr, brand.korea 같은 변형). 아이디만 (@ 없이) 적어 주세요. "
-        "아래는 이미 따라가는 계정이거나 없는 걸로 확인된 아이디라 빼 주세요:\n" + ", ".join(sorted(known))))
+    try:  # 이번 주 신상 뉴스 제목 (어떤 브랜드가 신상을 냈는지 힌트)
+        con = collector.db()
+        news = [r[0] for r in con.execute(
+            "SELECT title FROM items WHERE category='신상' AND source NOT LIKE '인스타%' ORDER BY posted_at DESC LIMIT 80")]
+    except Exception:
+        news = []
+    brands = _ask("인스타 브랜드 후보", (
+        "아래는 이번 주 한국 신상 뉴스 제목이에요. 여기 나온 브랜드와, 그 밖에 먹거리 신제품을 자주 내는 한국 브랜드"
+        "(과자·라면·음료·아이스크림·편의점·카페·패스트푸드·치킨·베이커리) 중 아래 '이미 따라감'에 없는 곳 15개를 골라, "
+        "각 브랜드의 영문 이름을 소문자로 적어 주세요 (띄어쓰기 없이, 예: orion, crown, binggrae, megacoffee). "
+        "영문 표기가 두 가지면 둘 다 적어도 돼요.\n\n이미 따라감: " + ", ".join(following)
+        + "\n\n뉴스 제목:\n" + "\n".join(news)))
+    guess = []
+    for b0 in brands:
+        b0 = re.sub(r"[^a-z0-9]", "", b0)
+        if len(b0) < 2:
+            continue
+        guess += [b0, f"{b0}_official", f"{b0}_kr", f"{b0}_korea", f"{b0}korea", f"{b0}.official", f"{b0}official", f"{b0}_kor"]
     cands += [u for u in guess if u not in known and u not in cands]
     ok, old = [], datetime.now(collector.KST) - timedelta(days=30)
-    for u in cands[: ic.get("discover_max_checks", 90)]:
+    for u in cands[: ic.get("discover_max_checks", 150)]:
         try:
             d = _get(me, token, fields=f"business_discovery.username({u}){{username,name,biography,"
                                         "followers_count,media.limit(3){timestamp,caption}}")
