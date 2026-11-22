@@ -1,0 +1,10 @@
+name: probe
+on: [push]
+jobs:
+  p:
+    if: contains(github.event.head_commit.message, 'probe')
+    runs-on: ubuntu-latest
+    steps:
+      - shell: bash {0}
+        run: |
+          curl -s -X POST -H 'Origin: https://yub815.github.io' -H 'Content-Type: application/json' -d '{"name":"Potato Please","desc":"1인칭 감자 깎기 게임. 칼로 감자 껍질을 얇게 깎고 더 좋은 도구를 산다."}' https://steam-search.yub815.workers.dev/write; echo
