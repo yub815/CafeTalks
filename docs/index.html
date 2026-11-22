@@ -273,7 +273,7 @@ async function prepareGifs(){
     k++;
     const url = img.src.split('?')[0];
     try{
-      if((await fetch(url, {method: 'GET'})).ok) continue;  // 이미 올려 둠
+      if((await fetch(url, {method: 'GET', cache: 'no-store'})).ok){ img.src = url + '?v=' + Date.now(); continue; }  // 이미 올려 둠
       say(`GIF 만드는 중 (${k}/${imgs.length})... 끝나면 복사하세요`);
       const v = await fetch(PROXY + '/media?u=' + encodeURIComponent(img.dataset.mp4));
       const gif = await mp4ToGif(await v.blob());
