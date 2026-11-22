@@ -325,5 +325,12 @@
     "max_posts_per_account": 5,
     "_설명": "따라갈 브랜드 공식 X 계정 (@ 빼고). 적을수록 쌉니다. 글 1개 읽기 $0.005, 새 글만 가져와요.",
     "accounts": []
+  },
+  "instagram_source": {
+    "enabled": true,
+    "category": "신상",
+    "posts_per_account": 8,
+    "_설명": "따라갈 브랜드 공식 인스타 계정 (@ 빼고). 비즈니스/크리에이터 계정만 됩니다. 못 찾은 계정은 data/ig_state.json 의 missing 에 적혀요.",
+    "accounts": []
   }
 }

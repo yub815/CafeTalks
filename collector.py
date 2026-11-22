@@ -707,6 +707,16 @@ def main(humor_only: bool = False) -> None:
     except Exception as e:
         log(f"  ! X 수집 실패: {e}")
 
+    # 브랜드 공식 인스타 계정의 새 글 → 신상 후보 (하루 한 번, IG_ACCESS_TOKEN 있을 때만)
+    try:
+        import instagram_source
+        for it in instagram_source.collect(cfg):
+            upsert(con, it)
+            total += 1
+        con.commit()
+    except Exception as e:
+        log(f"  ! 인스타 수집 실패: {e}")
+
     # 이번 주 방영한 애니 회차 중 IMDb 평점 높은 회차 (하루 한 번)
     try:
         import anime_ratings
