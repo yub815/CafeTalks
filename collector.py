@@ -693,6 +693,17 @@ def main(humor_only: bool = False) -> None:
     except Exception as e:
         log(f"  ! 방송 게임 수집 실패: {e}")
     if humor_only:
+        # 저녁 6시 갱신 때는 브랜드 인스타도 한 번 더 읽음 (아침 6시 전체 수집 + 저녁 6시, 하루 두 번)
+        if datetime.now(KST).hour >= 17:
+            try:
+                import instagram_source
+                if instagram_source.due_evening():
+                    for it in instagram_source.collect(cfg):
+                        upsert(con, it)
+                        total += 1
+                    con.commit()
+            except Exception as e:
+                log(f"  ! 인스타 수집 실패: {e}")
         log(f"\n유머만 갱신 완료! {total}개 저장됨")
         con.close()
         return
