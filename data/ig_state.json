@@ -50,17 +50,37 @@
   "ministop_korea",
   "wonjinfood",
   "pelicana_kr",
-  "samlip_official"
+  "samlip_official",
+  "빙그레: binggrae_kr, binggrae.official, binggraekorea",
+  "오뚜기: ottogi_kr, ottogi.official, ottogikorea",
+  "크라운해태: crownhaitai, crown_haitai, crownhaitai_kr",
+  "롯데칠성: lottechilsung, lotte_chilsung, lottechilsung_kr",
+  "동서식품: dongsuhfood, dongsuh_kr, dongsuh.official",
+  "팔도: paldo_kr, paldo_official, paldo.korea",
+  "매일유업: maeil_official, maeilmilk, maeil_kr",
+  "서울우유: seoulmilk, seoulmilk_official, seoulmilk_kr",
+  "남양유업: namyang_official, namyangdairy, namyang_kr",
+  "뚜레쥬르: tous_les_jours, tousles_kr, tousleskorea",
+  "노브랜드: nobrand_official, nobrand_kr, nobrandkorea",
+  "맘스터치: momstouch_kr, momstouch_official, momstouch.korea",
+  "처갓집: chegajip_official, chegajip_kr, chegajip.korea",
+  "네네치킨: nene_chicken, nenechicken_kr, nene.korea",
+  "할리스: hallys_coffee, hallys_kr, hallyscoffee_official",
+  "메가커피: mega_kr, megacoffee_kr, mega.coffee",
+  "더벤티: theventi_coffee, theventi_kr, theventi.official",
+  "카페베네: caffebene_kr, caffebene_official, caffebene.korea",
+  "나뚜루: natuur_kr, natuurkorea, natuur_official",
+  "청정원: chungjungone_official, chungjungone_kr, chungjungone.korea"
  ],
  "found": {},
  "mentions": {
   "vincentcosmic.co.kr": 1
  },
- "last_collect": "2026-11-22T13:08+09:00",
+ "last_collect": "2026-11-22T13:16+09:00",
  "rejected": [
   "pulmuone_official",
   "maxim_official",
   "chilsung_official"
  ],
- "last_discover": "2026-11-22T13:09+09:00"
+ "last_discover": "2026-11-22T13:17+09:00"
 }
