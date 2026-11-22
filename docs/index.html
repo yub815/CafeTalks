@@ -129,7 +129,21 @@ function media(src, cls=''){
   return src.endsWith('.mp4') ? `<video src="${esc(src)}" muted autoplay loop playsinline class="${cls}"></video>` : `<img loading="lazy" src="${esc(src)}" class="${cls}">`;
 }
 
+// 목록을 다시 그려도(게임 추가 등) 체크·고른 사진·고친 글이 유지되게 화면 상태를 기억해 둠
+function keepState(){
+  const st = {picks: new Set(), imgs: {}, text: {}};
+  document.querySelectorAll('.pick:checked').forEach(c => st.picks.add(c.value));
+  document.querySelectorAll('.card').forEach(card => {
+    const id = card.id.slice(1);
+    const im = card.querySelectorAll('.img' + id);
+    if(im.length) st.imgs[id] = [...im].map(c => c.checked);
+    ['h', 't'].forEach(k => { const el = $('#' + k + id); if(el) st.text[k + id] = el.value; });
+  });
+  return st;
+}
+let LIST_STATE = null;
 function renderList(){
+  if(document.querySelector('.card')) LIST_STATE = keepState();
   document.querySelectorAll('.tab').forEach(t => t.classList.toggle('on', t.dataset.c === CAT));
   if(!WEEK) WEEK = THIS_WEEK;
   const weeks = [...new Set([THIS_WEEK, ...DATA.items.map(it => it.week).filter(Boolean)])].sort().reverse();
@@ -194,6 +208,12 @@ function renderList(){
     try{ localStorage.setItem('wc_rank_n', RANK_N); }catch(_){}
     renderList();
   };
+  if(LIST_STATE){
+    const st = LIST_STATE;
+    document.querySelectorAll('.pick').forEach(c => { if(st.picks.has(c.value)) c.checked = true; });
+    Object.entries(st.imgs).forEach(([id, arr]) => document.querySelectorAll('.img' + id).forEach((c, i) => { if(i < arr.length) c.checked = arr[i]; }));
+    Object.entries(st.text).forEach(([k, v]) => { const el = $('#' + k); if(el && v !== '코멘트 쓰는 중...') el.value = v; });
+  }
   document.querySelectorAll('.pick:checked').forEach(c => c.closest('.card').classList.add('sel'));
   if($('#gq')) setupGameAdd();
   document.querySelectorAll('[data-del]').forEach(b => b.onclick = () => { CUSTOM = CUSTOM.filter(x => x.id !== b.dataset.del); saveCustom(); renderList(); });
