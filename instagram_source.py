@@ -106,17 +106,20 @@ def collect(cfg: dict) -> list[dict]:
             ts = m.get("timestamp", "")
             if last and ts <= last:
                 continue
-            cap = m.get("caption") or ""
+            cap = re.sub(r"[\u2800\u200b\u3164]+", " ", m.get("caption") or "")
             posted = datetime.strptime(ts, "%Y-%m-%dT%H:%M:%S%z").astimezone(collector.KST)
             if posted < old or not LAUNCH.search(cap):
                 continue
-            if GIVEAWAY.search(cap) and not re.search(r"출시|신제품|신메뉴", cap):
-                continue  # 경품·추첨 위주 글은 뺌
+            head = cap.strip().split("\n", 1)[0]
+            if (GIVEAWAY.search(cap) or re.search(r"EVENT|이벤트", head, re.I)) \
+                    and not re.search(r"출시|신제품|신메뉴", cap):
+                continue  # 경품·추첨·이벤트 위주 글은 뺌
             imgs = _images(m)
             if not imgs:
                 continue
             body = re.sub(r"(#\S+\s*)+$", "", cap.strip()).strip()  # 끝에 몰린 해시태그 제거
-            first = next((l.strip() for l in body.splitlines() if len(l.strip()) > 4), body)[:70]
+            first = next((l.strip() for l in body.splitlines()
+                          if len(re.sub(r"#\S+|[^\w가-힣]", "", l)) > 4), body)[:70]
             items.append({
                 "category": ic.get("category", "신상"), "source": f"인스타 · @{name}",
                 "url": m.get("permalink", f"https://www.instagram.com/{name}/"),
