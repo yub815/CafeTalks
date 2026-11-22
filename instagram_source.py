@@ -108,6 +108,9 @@ def collect(cfg: dict, force_discover: bool = False) -> list[dict]:
                 print(f"  ! 인스타 계정을 못 찾음 (비즈니스 계정이 아니거나 이름 틀림): @{name}")
             else:
                 print(f"  ! @{name} 인스타 글 가져오기 실패: {e}")
+                if "(#4)" in str(e):
+                    print("  ! 인스타 시간당 조회 한도에 걸려서 이번엔 멈춤 (다음 수집 때 다시 읽어요)")
+                    break
             continue
         ok += 1
         media = ((d.get("business_discovery") or {}).get("media") or {}).get("data", [])
@@ -206,13 +209,16 @@ def discover(cfg: dict, token: str, me: str, st: dict, following: list[str]) -> 
         guess += [b0, f"{b0}_official", f"{b0}_kr", f"{b0}_korea", f"{b0}korea", f"{b0}.official", f"{b0}official", f"{b0}_kor"]
     cands += [u for u in guess if u not in known and u not in cands]
     ok, old = [], datetime.now(collector.KST) - timedelta(days=30)
-    for u in cands[: ic.get("discover_max_checks", 150)]:
+    for u in cands[: ic.get("discover_max_checks", 80)]:
         try:
             d = _get(me, token, fields=f"business_discovery.username({u}){{username,name,biography,"
                                         "followers_count,media.limit(3){timestamp,caption}}")
         except Exception as e:
             if "Invalid user id" in str(e) or "cannot be found" in str(e) or "(#110)" in str(e):
                 missing.append(u)
+            elif "(#4)" in str(e):
+                print("  ! 인스타 시간당 조회 한도에 걸려서 새 계정 찾기를 멈춤")
+                break
             continue
         b = d.get("business_discovery") or {}
         media = (b.get("media") or {}).get("data", [])
