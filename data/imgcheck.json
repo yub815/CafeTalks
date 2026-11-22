@@ -315,9 +315,6 @@
  "https://www.seoul.co.kr/news/economy/2026/11/13/20261113500209": [
   "img/e810b5dc51621cf6.jpg"
  ],
- "https://www.joongang.co.kr/article/25478975": [
-  "img/14b3fcd65ac73051.jpg"
- ],
  "https://www.thepowernews.co.kr/view.php?ud=202611161005134136de3f0aa1be_7": [
   "img/7ee7c12c2e9ffe58.jpg"
  ],
@@ -333,9 +330,6 @@
  "https://www.sportalkorea.com/news/articleView.html?idxno=2025052909553705815": [
   "img/bc00b14e55a77bbc.jpg"
  ],
- "https://www.ggilbo.com/news/articleView.html?idxno=1193560": [
-  "img/cc07e700ccae579c.jpg"
- ],
  "https://www.youthdaily.co.kr/news/article.html?no=229929": [],
  "https://www.etnews.com/20261117000056": [
   "img/da7f2b0976279605.jpg"
@@ -346,9 +340,6 @@
  ],
  "https://www.s-journal.co.kr/news/articleView.html?idxno=45359": [],
  "https://www.pointdaily.co.kr/news/articleView.html?idxno=326214": [],
- "https://www.autodaily.co.kr/news/articleView.html?idxno=602169": [
-  "img/2acb5ff4f82d3368.jpg"
- ],
  "https://www.2news.co.kr/news/articleView.html?idxno=32983": [],
  "https://www.wikitree.co.kr/articles/1175498": [
   "img/61a392037ac64b7b.jpg",
@@ -377,11 +368,6 @@
  ],
  "https://www.msn.com/ko-kr/news/other/%ED%85%8C%EC%9D%BC%EB%9F%AC%ED%8C%9C%EC%8A%A4-%EC%A0%9C%EB%A1%9C%EC%8A%88%EA%B0%80-%EA%B5%AC%EB%AF%B8-%EC%8B%A0%EC%A0%9C%ED%92%88-%EB%AC%B4%EC%BF%A0%EB%AC%B4%EC%BF%A0-%EB%B8%8C%EC%9D%B4-%EB%A0%88%EB%AA%AC%EA%B5%AC%EB%AF%B8-%EC%B6%9C%EC%8B%9C/ar-AA2hJQIt": [
   "img/0084339c8827d363.jpg"
- ],
- "https://www.lawissue.co.kr/view.php?ud=202611161353582137204ead0791_12": [
-  "img/ee79536411eb602d.jpg",
-  "img/cef9a6617d7b3e5e.jpg",
-  "img/3573d3c6d1ee11a7.jpg"
  ],
  "https://www.nextdaily.co.kr/news/articleView.html?idxno=255050": [
   "img/9ecca0dad1e5fcf1.jpg"
@@ -463,18 +449,11 @@
  "https://www.sisunnews.co.kr/news/articleView.html?idxno=250146": [
   "img/06e210ab089dec3b.jpg"
  ],
- "http://www.newslock.co.kr/news/articleView.html?idxno=140159": [],
  "https://www.financialpost.co.kr/news/articleView.html?idxno=301212": [
   "img/9f304bf572da630a.jpg"
  ],
- "https://www.insight.co.kr/news/582323": [
-  "img/afcd50f515e5792a.jpg"
- ],
  "https://www.shinailbo.co.kr/news/articleView.html?idxno=5084156": [
   "img/65b544336a1688e1.jpg"
- ],
- "https://www.cnbnews.com/news/articleView.html?idxno=1024647": [
-  "img/fdac7a18e4b2d8f6.jpg"
  ],
  "https://www.apnews.kr/news/articleView.html?idxno=3053356": [
   "img/d7ec155e193ee17d.jpg",
@@ -483,7 +462,6 @@
  "https://www.gosiweek.com/article/1065590611814816": [
   "img/aed9977897dbc9a3.jpg"
  ],
- "https://dailymagazine.co.kr/news/newsview.php?ncode=1065540327715864": [],
  "https://www.etnews.com/20261118000405": [
   "img/501361c7dcce9cab.jpg"
  ],
@@ -518,5 +496,87 @@
  "https://www.wikitree.co.kr/articles/1176263": [
   "img/6bf252b83f2ab1a5.jpg",
   "img/8d8c97bcd2125391.jpg"
+ ],
+ "https://www.instagram.com/p/Df4Boxihu_c/": [
+  "img/2f720bd74a896133.jpg"
+ ],
+ "https://www.instagram.com/p/DfzBeyPjzj_/": [
+  "img/cf8121490f28c57a.jpg"
+ ],
+ "https://www.instagram.com/p/Df1VrioTrPo/": [
+  "img/e8c778532e3e14ef.jpg"
+ ],
+ "https://www.instagram.com/p/Df8XxgiI2pD/": [
+  "img/6c196df48c95604a.jpg",
+  "img/1288ba8fe86a9627.jpg",
+  "img/86b22c6707656afe.jpg"
+ ],
+ "https://www.instagram.com/p/DfyBHG0tt0-/": [
+  "img/7ba608845a99bb26.jpg"
+ ],
+ "https://www.instagram.com/p/Df3C-4lzghz/": [
+  "img/f071ea4ea94482eb.jpg"
+ ],
+ "https://www.instagram.com/p/Df3Sfa-NYaV/": [
+  "img/ed48173ed0d0870d.jpg"
+ ],
+ "https://www.instagram.com/p/Df5-b9bBeez/": [],
+ "https://www.instagram.com/p/Df6p9lgi6RS/": [
+  "img/1be4bca50f259cf3.jpg",
+  "img/bc0d54aa705c801b.jpg",
+  "img/9e3ca6fbf637c4af.jpg",
+  "img/764a203422be2e9e.jpg"
+ ],
+ "https://www.instagram.com/p/Df9cFDpB3ap/": [
+  "img/f13244f5acde86d6.jpg"
+ ],
+ "https://www.instagram.com/p/Df7KOEbDxJp/": [
+  "img/0cf91344d1da84a2.jpg"
+ ],
+ "https://www.ziksir.com/news/articleView.html?idxno=154106": [
+  "img/09d7da811f296364.jpg"
+ ],
+ "https://www.instagram.com/p/Df8o8m5Nd9q/": [
+  "img/b26f6c564b2425a7.jpg",
+  "img/9e9f78dc2fcb44de.jpg",
+  "img/55ad462e5a8de52e.jpg",
+  "img/0a9271968d530402.jpg"
+ ],
+ "https://www.instagram.com/p/Df6R6QKET_1/": [
+  "img/f770f2cd2937b649.jpg"
+ ],
+ "https://www.instagram.com/reel/Df_NxunvIbF/": [
+  "img/1e0ff500870b46d5.jpg"
+ ],
+ "https://www.instagram.com/p/Df6tYCzgRj6/": [],
+ "https://www.instagram.com/reel/Df9SQXHKmxL/": [
+  "img/141f09692f26b363.jpg"
+ ],
+ "https://www.instagram.com/reel/Df9SPWqhP0M/": [],
+ "https://www.instagram.com/reel/DfyBO2egjHh/": [
+  "img/87d0442ffbaa7876.jpg"
+ ],
+ "https://www.instagram.com/reel/Df9LUIIn529/": [
+  "img/e7cdab63553ac62d.jpg"
+ ],
+ "https://www.instagram.com/p/Df6mfB-BJ98/": [
+  "img/65e879228b046e4e.jpg",
+  "img/83f997e44c128ec7.jpg",
+  "img/99e2ecb65e355e55.jpg"
+ ],
+ "https://www.instagram.com/p/Df1hxHIklbT/": [
+  "img/929918c8719306ff.jpg",
+  "img/b7b8c8f23944f5cc.jpg",
+  "img/e49c520213ed8ecc.jpg",
+  "img/13c32af27cfb3a1c.jpg"
+ ],
+ "https://www.instagram.com/p/Df8a0gZSkeW/": [
+  "img/154a2387ccb51626.jpg"
+ ],
+ "https://www.foodnews.news/news/article.html?no=1644775": [
+  "img/aa0cd58e96189d57.jpg"
+ ],
+ "https://www.fnnews.com/news/202611181030216710": [
+  "img/197cbd956d552be0.jpg"
  ]
 }
