@@ -515,10 +515,6 @@
   "heading": "삼양식품 스핀들 소지섭 광고",
   "comment": "헬스케어 브랜드 스핀들 첫 모델이 소지섭이다요\n홈쇼핑 판매도 늘린대용"
  },
- "https://www.ziksir.com/news/articleView.html?idxno=154106": {
-  "heading": "빙그레 클린라벨 프리미엄 아이스크림",
-  "comment": "첨가물 줄인 프리미엄 아이스크림 클린라벨이 나왔다요\n원재료를 최소한으로 쓴 제품이래용"
- },
  "https://economist.co.kr/article/view/ecn202611190008": {
   "heading": "우지커피 수제 딥 티라미수",
   "comment": "겨울 시즌 디저트 수제 딥 티라미수가 나왔다요\n딥 티라미수 라떼도 같이 나온대용"
@@ -530,14 +526,6 @@
  "https://www.apnews.kr/news/articleView.html?idxno=3053356": {
   "heading": "춘리마라탕 로제 마라샹궈",
   "comment": "마라샹궈에 로제소스 더한 신메뉴가 나왔다요\n얼얼한 마라맛에 크리미한 고소함이 더해졌대용"
- },
- "https://www.insight.co.kr/news/582955": {
-  "heading": "신세계백화점 디저트살롱 겨울 디저트 3종",
-  "comment": "호박죽이랑 팥죽, 홍시빙수가 포함된 계절 메뉴 3종이 나왔다요\n한식 디저트 살롱에서 먹을 수 있대용"
- },
- "https://www.ggilbo.com/news/articleView.html?idxno=1194471": {
-  "heading": "CU 연세우유 씨앗호떡 생크림빵",
-  "comment": "씨앗호떡 맛 생크림빵이 겨울 신메뉴로 나왔다요\n씨앗 토핑이랑 꿀이 듬뿍 들어갔대용"
  },
  "https://plus.hankyung.com/apps/newsinside.view?aid=202611211381i&sns=y": {
   "heading": "원할머니 어리굴젓 보쌈",
@@ -1099,10 +1087,6 @@
   "heading": "Muse로 AI 게임 개발 2편",
   "comment": "AI 에이전트 Muse한테 채팅으로 지시해서 브라우저 게임을 처음부터 만들어 가는 기록이다요\n게임은 아직 제작 중이고 공개는 안 했다요"
  },
- "https://www.msn.com/ko-kr/entertainment/%EC%9D%BC%EB%B0%98/%EC%A0%9C%EC%9E%91%EB%B9%84-%EC%95%BD-4%EC%A1%B0%EC%9B%90-%EA%B2%8C%EC%9E%84%ED%95%98%EB%9F%AC-%ED%9C%B4%EA%B0%80-%ED%99%94%EC%A0%9C%EC%9D%98-gta6-%EC%9E%90%EC%A0%95-%EC%B6%9C%EC%8B%9C-%EB%89%B4%EC%8A%A4%EB%9F%BD%EB%8B%A4/ar-AA2hGp8r": {
-  "heading": "GTA6",
-  "comment": "13년 만에 나온 그랜드 테프트 오토6다요\n제작비만 약 4조원 들었다요"
- },
  "https://swtvnews.com/news/newsview.php?ncode=1065572417929682": {
   "heading": "피의 게임3",
   "comment": "웨이브 오리지널 서바이벌 예능 피의 게임3다요\n두뇌 싸움이랑 심리전이 중심인 프로그램이다요"
@@ -1286,5 +1270,113 @@
  "https://times.abema.tv/ko/articles/-/10290393": {
   "heading": "명탐정 코난 다이너 시부야 오픈",
   "comment": "방송 30주년 기념으로 시부야 스트림에 코난 테마 음식점이 생겼다요\n11월 26일 그랜드 오픈이래용"
+ },
+ "https://www.mk.co.kr/news/business/12214364": {
+  "heading": "세븐일레븐 성시경 라면",
+  "comment": "성시경이랑 같이 만든 바지락 짬뽕라면이 나왔다요\n바지락 원물을 통째로 넣은 해장 라면이대용"
+ },
+ "https://www.eroun.net/news/articleView.html?idxno=95578": {
+  "heading": "해태 어드벤트 캘린더",
+  "comment": "크리스마스까지 매일 간식을 꺼내 먹는 어드벤트 캘린더가 나왔다요\n패키지를 직접 꾸며서 과자집 무드등으로 쓸 수 있대용"
+ },
+ "https://www.newstap.co.kr/news/articleView.html?idxno=338232": {
+  "heading": "롤링파스타 바질 신메뉴 2종",
+  "comment": "쉬림프 바질 크림 파스타랑 바질 리코타 피자가 나왔다요\n이탈리아 제노바산 바질페스토를 썼대용"
+ },
+ "https://www.instagram.com/reel/Df6BgRrjGMn/": {
+  "heading": "초콜릿 와퍼",
+  "comment": "와퍼 재료를 초콜릿으로 바꾼 초콜릿 와퍼가 나왔다요\n매장에서 수제로 만들어서 하루 한정 수량만 판매한대용"
+ },
+ "https://www.instagram.com/reel/Df1e3Y0hLX2/": {
+  "heading": "비요뜨 프로틴 쉐이크 3종",
+  "comment": "단백질 20g을 담은 프로틴 쉐이크 3종이 나왔다요\n초코링 초코, 크런치볼 볶은곡물, 세븐베리 요거트 맛이대용"
+ },
+ "https://www.edaily.co.kr/News/Read?newsId=03499766645647032": {
+  "heading": "우지커피 겨울 신메뉴 9종",
+  "comment": "에스프레소 음료랑 이탈리아 디저트 위주로 겨울 신메뉴 9종이 나왔다요"
+ },
+ "https://www.instagram.com/reel/Df_NxunvIbF/": {
+  "heading": "세븐일레븐 꼬막 비빔밥",
+  "comment": "제철 국내산 새꼬막을 넣은 비빔밥이 나왔다요\n5,200원이고 11/24까지 양푼김치찌개라면 증정 행사도 한대용"
+ },
+ "https://www.instagram.com/p/Df8bai6hSeJ/": {
+  "heading": "무신사 무진장 버거",
+  "comment": "치킨이랑 비프를 한 겹씩 쌓은 스모키 버거가 나왔다요\n무신사 무진장 팩 사면 행운권 응모 기회도 준대용"
+ },
+ "https://www.dailypharm.com/user/news/344691": {
+  "heading": "보고신약 약국 전용 신제품 10종",
+  "comment": "약국에서만 파는 신제품 10종이 나왔다요\n액상 마그네슘 드링크 마그데이도 11월 중에 나온대용"
+ },
+ "https://www.specialtimes.co.kr/news/articleView.html?idxno=486892": {
+  "heading": "라모스버거 샬롯홈즈버거",
+  "comment": "원주직영점에서 선보인 한정 샬롯홈즈버거다요\n버거 챔피언십 예선 3등 메뉴고 프렌치 드레싱이랑 석류알이 들어갔대용"
+ },
+ "https://www1.edaily.co.kr/News/Read?newsId=01774486645648672&mediaCodeNo=257": {
+  "heading": "79대포 겨울 신메뉴 3종",
+  "comment": "부산얼큰해장술밥, 옛날김치우동, 꿀군고구마튀김이 나왔다요\n12월 1일부터 전국 가맹점에서 판매한대용"
+ },
+ "https://www.newsis.com/view/NISX20261123_0003878692": {
+  "heading": "세븐일레븐 크리스마스 케이크 5종",
+  "comment": "1~2인 가구용 1만원대 소용량 크리스마스 케이크 등 디저트 5종이 나왔다요"
+ },
+ "https://enter.etoday.co.kr/news/view/305597": {
+  "heading": "사당귀 GS25 김민관 팀장 집 공개",
+  "comment": "사당귀에 GS25 김민관 팀장이 나와서 집을 공개했다요\n김용빈 금수저 황금푸딩이랑 박명수 생수도 평가한대용"
+ },
+ "https://www.newstap.co.kr/news/articleView.html?idxno=338004": {
+  "heading": "본죽 GS25 반전 디저트",
+  "comment": "팥죽인 줄 알았는데 초코케이크인 3900원 디저트가 나왔다요\n동짓날 팥죽 풍습을 디저트로 바꿔서 만들었대용"
+ },
+ "https://www.msn.com/ko-kr/news/other/%EB%86%8D%EC%8B%AC-41%EB%85%84-%EB%A7%8C%EC%97%90-%EC%B2%AB-%EC%98%A4%EC%A7%95%EC%96%B4%EC%A7%91-%EC%8B%9C%EB%A6%AC%EC%A6%88-%EB%B6%88%EC%98%A4%EC%A7%95%EC%96%B4%EC%A7%91-%EC%B6%9C%EC%8B%9C-30%EC%9D%BC-%EC%9D%B4%EB%A7%88%ED%8A%B8-%EC%84%A0%EC%B6%9C%EC%8B%9C/ar-AA2i08hL": {
+  "heading": "농심 불오징어집",
+  "comment": "41년 만에 나온 첫 오징어집 시리즈 불오징어집이 나왔다요\n오징어볶음 맛을 구현했고 30일 이마트에 먼저 나온대용"
+ },
+ "https://www.msn.com/ko-kr/entertainment/games/%EB%B9%95%EC%8A%A4-%EA%B2%A8%EC%9A%B8-%EC%8B%A0%EB%A9%94%EB%89%B4-%EC%B6%9C%EC%8B%9C-%EC%88%98%EB%8F%84%EA%B6%8C%EC%97%90-%EA%B7%B8%EB%A6%B4%EB%8B%A4%EC%9D%B4%EB%8B%9D-%EB%A7%A4%EC%9E%A5-%EC%B6%94%EA%B0%80-%EA%B0%9C%EC%A0%90/ar-AA2hZ2cN": {
+  "heading": "빕스 겨울 신메뉴",
+  "comment": "겨울 대표 식재료를 쓴 신메뉴가 나왔다요\n수도권에 그릴다이닝 매장도 추가로 연대용"
+ },
+ "https://www.instagram.com/p/DgECxZ9kX14/": {
+  "heading": "누들핏 WIDE 마라탕 짬뽕",
+  "comment": "넓적면을 쓴 누들핏 WIDE에 사천마라탕이랑 광동짬뽕이 나왔다요\n둘 다 단 100kcal라고 하대용"
+ },
+ "https://www.instagram.com/reel/DgEJntexSpQ/": {
+  "heading": "이마트24 x 럭키 콜라보",
+  "comment": "마살라차이라떼, 차이티라떼, 버터치킨커리덮밥, 커리치킨버거가 나온다요\n마살라차이라떼는 11/27부터, 나머지는 12/2~12/4 사이에 나온대용"
+ },
+ "https://www.msn.com/ko-kr/news/other/%EA%B5%90%EC%B4%8C%EC%B9%98%ED%82%A8-%EB%8B%AD-%ED%8A%B9%EC%88%98%EB%B6%80%EC%9C%84-%ED%99%9C%EC%9A%A9-%EC%8B%A0%EB%A9%94%EB%89%B4-%EC%86%8C%EC%9D%B4%ED%8C%8C%EB%8B%AD%ED%8E%B8%EC%9C%A1-%EC%B6%9C%EC%8B%9C/ar-AA2hZGiF": {
+  "heading": "교촌치킨 소이파닭편육",
+  "comment": "닭 특수부위를 활용한 사이드 메뉴 소이파닭편육이 나왔다요\n막걸리 같은 주류랑 같이 먹기 좋은 안주라대용"
+ },
+ "https://www.youtube.com/watch?v=lKyyuyoraMU#w2026-11-16": {
+  "heading": "GTA 6",
+  "comment": "오픈월드 액션 어드벤처 게임이다요\n2026년 11월 19일에 PS5, XSX로 나온다요"
+ },
+ "https://www.roblox.com/games/134208374070897/MONOCHROME#w2026-11-16": {
+  "heading": "모노크롬",
+  "comment": "로블록스 게임이다요\n방에 갇혀서 버려진 복도 네트워크를 헤매면서 탈출하는 게임이다요"
+ },
+ "https://store.steampowered.com/app/5229450/#w2026-11-16": {
+  "heading": "Hammer These Nails!",
+  "comment": "못 만만 개를 박는 노동 게임이다요"
+ },
+ "https://sateconomy.co.kr/news/view/1065577427811864": {
+  "heading": "컴투스 엔씨 넥슨 인기 게임 신규 콘텐츠",
+  "comment": "컴투스, 엔씨, 넥슨이 인기 게임에 새 지역이랑 캐릭터를 추가했다요\n컴투스는 MMORPG 성장 콘텐츠를 늘렸다요"
+ },
+ "http://www.popcornnews.net/news/articleView.html?idxno=140818": {
+  "heading": "주간 게임 순위 도깨비의세계 발로란트",
+  "comment": "11월 셋째 주 게임 순위 얘기다요\n도깨비의세계가 구글 1위에 올랐다요"
+ },
+ "https://note.com/az_aka/n/nc2f650893db4?hl=ko": {
+  "heading": "구스 에그 러시",
+  "comment": "오리를 조작해서 알을 모으는 게임이다요\n시청자가 선물을 보내서 게임을 방해하거나 도울 수 있다요"
+ },
+ "https://www.newstap.co.kr/news/articleView.html?idxno=338081": {
+  "heading": "유니티 지스타 2026 인디게임 30종",
+  "comment": "지스타 2026에서 유니티 인디게임 30종이 나온다요\n스팀 리뷰 90% 긍정이라는 호평작도 있다요"
+ },
+ "https://store.steampowered.com/app/5099290/": {
+  "heading": "Dub Night Live",
+  "comment": "짧은 영상 클립을 친구들이랑 재더빙하는 게임이다요\n최대 8명이 동시에 녹음하고 완성본은 다 같이 듣는다요"
  }
 }
