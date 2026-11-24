@@ -1,20 +1,20 @@
 {
  "ig_id": "17841434825670663",
  "seen": {
-  "cu_official": "2026-11-24T03:00:08+0000",
-  "gs25_official": "2026-11-24T02:27:48+0000",
-  "7elevenkorea": "2026-11-23T06:00:02+0000",
-  "emart24_official": "2026-11-24T03:57:59+0000",
-  "nongshim": "2026-11-24T04:00:09+0000",
+  "cu_official": "2026-11-24T09:01:14+0000",
+  "gs25_official": "2026-11-24T09:00:08+0000",
+  "7elevenkorea": "2026-11-24T09:00:03+0000",
+  "emart24_official": "2026-11-24T08:42:37+0000",
+  "nongshim": "2026-11-24T08:00:02+0000",
   "lottewellfood": "2026-11-24T01:16:40+0000",
   "samyangfoods": "2026-11-11T10:09:07+0000",
   "paldofood": "2026-11-19T01:03:30+0000",
   "cjcheiljedang": "2026-11-20T10:04:58+0000",
-  "starbuckskorea": "2026-11-24T01:00:02+0000",
+  "starbuckskorea": "2026-11-24T07:41:01+0000",
   "mcdonalds_kr": "2026-11-23T01:30:04+0000",
   "burgerkingkorea": "2026-11-24T00:51:32+0000",
-  "baskinrobbinskorea": "2026-11-24T05:00:08+0000",
-  "parisbaguette_kr": "2026-11-24T05:12:09+0000",
+  "baskinrobbinskorea": "2026-11-24T08:01:11+0000",
+  "parisbaguette_kr": "2026-11-24T06:53:33+0000",
   "lotteria_kr": "2026-11-23T02:52:24+0000",
   "kfc_korea": "2026-11-20T09:00:04+0000",
   "compose_coffee": "2026-11-18T08:00:08+0000",
@@ -88,7 +88,7 @@
  "mentions": {
   "vincentcosmic.co.kr": 1
  },
- "last_collect": "2026-11-24T14:12+09:00",
+ "last_collect": "2026-11-24T18:38+09:00",
  "rejected": [
   "pulmuone_official",
   "maxim_official",
@@ -159,6 +159,11 @@
   "https://www.instagram.com/p/DgEeSy7ka3w/": false,
   "https://www.instagram.com/p/DgGwRgyS9T2/": false,
   "https://www.instagram.com/p/DgGtaKij2J4/": true,
-  "https://www.instagram.com/reel/DgE5riHDvT3/": true
+  "https://www.instagram.com/reel/DgE5riHDvT3/": true,
+  "https://www.instagram.com/p/DgHenxZPLxn/": true,
+  "https://www.instagram.com/p/DgHlUsaIcVy/": false,
+  "https://www.instagram.com/p/DgHLlKXBBIf/": false,
+  "https://www.instagram.com/reel/DgHcLDNBqIo/": false,
+  "https://www.instagram.com/p/DgHW1m5kkMN/": false
  }
 }
