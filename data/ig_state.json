@@ -1,20 +1,20 @@
 {
  "ig_id": "17841434825670663",
  "seen": {
-  "cu_official": "2026-11-26T02:00:07+0000",
-  "gs25_official": "2026-11-26T02:00:11+0000",
-  "7elevenkorea": "2026-11-25T06:00:03+0000",
-  "emart24_official": "2026-11-26T03:13:41+0000",
-  "nongshim": "2026-11-26T00:00:02+0000",
+  "cu_official": "2026-11-26T08:00:31+0000",
+  "gs25_official": "2026-11-26T07:31:14+0000",
+  "7elevenkorea": "2026-11-26T06:00:03+0000",
+  "emart24_official": "2026-11-26T07:51:26+0000",
+  "nongshim": "2026-11-26T07:00:00+0000",
   "lottewellfood": "2026-11-24T01:16:40+0000",
   "samyangfoods": "2026-11-11T10:09:07+0000",
   "paldofood": "2026-11-19T01:03:30+0000",
-  "cjcheiljedang": "2026-11-25T08:04:31+0000",
-  "starbuckskorea": "2026-11-25T05:00:01+0000",
-  "mcdonalds_kr": "2026-11-26T01:30:19+0000",
+  "cjcheiljedang": "2026-11-26T08:00:11+0000",
+  "starbuckskorea": "2026-11-26T07:00:04+0000",
+  "mcdonalds_kr": "2026-11-26T05:00:27+0000",
   "burgerkingkorea": "2026-11-26T01:00:58+0000",
-  "baskinrobbinskorea": "2026-11-26T02:00:54+0000",
-  "parisbaguette_kr": "2026-11-25T06:59:58+0000",
+  "baskinrobbinskorea": "2026-11-26T08:00:23+0000",
+  "parisbaguette_kr": "2026-11-26T07:00:05+0000",
   "lotteria_kr": "2026-11-25T02:00:08+0000",
   "kfc_korea": "2026-11-20T09:00:04+0000",
   "compose_coffee": "2026-11-18T08:00:08+0000",
@@ -88,7 +88,7 @@
  "mentions": {
   "vincentcosmic.co.kr": 1
  },
- "last_collect": "2026-11-26T12:27+09:00",
+ "last_collect": "2026-11-26T17:00+09:00",
  "rejected": [
   "pulmuone_official",
   "maxim_official",
@@ -187,6 +187,19 @@
   "https://www.instagram.com/p/DgL3-4Nos1m/": false,
   "https://www.instagram.com/p/DgKPf-IPe2M/": false,
   "https://www.instagram.com/p/DgL-2eiSRw6/": false,
-  "https://www.instagram.com/p/DgL4jNMBd1N/": true
+  "https://www.instagram.com/p/DgL4jNMBd1N/": true,
+  "https://www.instagram.com/p/DgMoFyfpbQB/": false,
+  "https://www.instagram.com/p/DgMaUF_vFjJ/": true,
+  "https://www.instagram.com/p/DgMTczVMcWF/": true,
+  "https://www.instagram.com/reel/DgMktviM0Rl/": true,
+  "https://www.instagram.com/p/DgMdE3vh0eX/": true,
+  "https://www.instagram.com/p/DgMPCJ7y0nR/": false,
+  "https://www.instagram.com/p/DgMhKvqkm-c/": false,
+  "https://www.instagram.com/p/DgMMl4nkugx/": false,
+  "https://www.instagram.com/reel/DgMnsLMPxss/": true,
+  "https://www.instagram.com/p/DgMhLJaGbiP/": false,
+  "https://www.instagram.com/reel/DgMTf5TRMs8/": false,
+  "https://www.instagram.com/reel/DgMTd4YlrqW/": true,
+  "https://www.instagram.com/p/DgMaF7JBXMD/": true
  }
 }
